@@ -298,11 +298,6 @@ body {
   100% { background-position: 200% 0; }
 }
 
-@keyframes heroWaveDrift {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-200px); }
-}
-
 /* =========================================================================
    Phase colour transition — smooth 2.5s crossfade, never jump
    ========================================================================= */

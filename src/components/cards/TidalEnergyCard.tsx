@@ -49,9 +49,9 @@ export function TidalEnergyCard({ phase }: TidalEnergyCardProps) {
         {guidance.qualities}
       </div>
 
-      {/* Suggestions */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
-        {guidance.suggestions.map((s, i) => (
+      {/* Description lines */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {guidance.description.map((line, i) => (
           <div
             key={i}
             style={{
@@ -62,20 +62,9 @@ export function TidalEnergyCard({ phase }: TidalEnergyCardProps) {
               borderLeft: `2px solid ${colour}20`,
             }}
           >
-            {s}
+            {line}
           </div>
         ))}
-      </div>
-
-      {/* Instruments */}
-      <div
-        style={{
-          fontSize: '0.75rem',
-          color: 'var(--text-muted)',
-          fontStyle: 'italic',
-        }}
-      >
-        {guidance.instruments}
       </div>
     </InfoCard>
   )
