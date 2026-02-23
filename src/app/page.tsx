@@ -1,209 +1,208 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import type { TidalState } from '@/types/tidal'
-import type { TideStation } from '@/types/tidal'
+import { useMemo, useState, useEffect, useCallback } from 'react'
+import type { GeoLocation, TidalState } from '@/types/tidal'
+import { useTidalState } from '@/hooks/useTidalState'
+import { useGeolocation } from '@/hooks/useGeolocation'
+import { getPhaseColour } from '@/lib/colour-utils'
+import { getBreathTimings } from '@/lib/breath-ratios'
+import { DURATION } from '@/lib/motion-constants'
+import { OceanBackground } from '@/components/OceanBackground'
+import { Welcome } from '@/components/Welcome'
+import { Header } from '@/components/Header'
+import { BreathOrb } from '@/components/BreathOrb'
+import { ActionBar } from '@/components/ActionBar'
+import { GuideSheet } from '@/components/GuideSheet'
+import { TideInfoSheet } from '@/components/TideInfoSheet'
+import { SettingsSheet } from '@/components/SettingsSheet'
 
-// Verification page — temporary, replaced by real UI in Phase 2
+export default function TideResonancePage() {
+  // --- Welcome flow state ---
+  const [hasSeenWelcome, setHasSeenWelcome] = useState<boolean | null>(null)
+  const [welcomeLocation, setWelcomeLocation] = useState<GeoLocation | null>(null)
+  const [initialState, setInitialState] = useState<TidalState | null>(null)
 
-interface SearchResult {
-  stations: TideStation[]
-}
+  // --- Sheet state ---
+  const [guideOpen, setGuideOpen] = useState(false)
+  const [tideInfoOpen, setTideInfoOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
-export default function VerificationPage() {
-  const [tidalState, setTidalState] = useState<TidalState | null>(null)
-  const [searchResults, setSearchResults] = useState<SearchResult | null>(null)
-  const [nearestResult, setNearestResult] = useState<string>('')
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  // --- Breath state ---
+  const [breathSpeed, setBreathSpeed] = useState(1.0)
+  const [breathEnabled] = useState(true)
 
+  // Check localStorage on mount
   useEffect(() => {
-    async function verify() {
-      try {
-        setLoading(true)
-
-        const {
-          findNearestStation,
-          searchStations,
-          computeTidalState,
-        } = await import('@/lib/tideEngine')
-
-        // 1. Test: Find nearest station to Whitby (54.486, -0.615)
-        console.log('--- TIDE RESONANCE DATA VERIFICATION ---')
-        console.log('Testing with Whitby coordinates: 54.486, -0.615')
-
-        const nearest = await findNearestStation(54.486, -0.615)
-        if (!nearest) {
-          setError('No station found near Whitby')
-          return
-        }
-
-        console.log('Nearest station:', nearest.station.name)
-        console.log('Distance:', nearest.distanceKm.toFixed(1), 'km')
-        setNearestResult(
-          `${nearest.station.name} (${nearest.distanceKm.toFixed(1)} km)`
-        )
-
-        // 2. Compute full tidal state
-        const state = await computeTidalState(
-          nearest.station,
-          nearest.distanceKm
-        )
-        console.log('Tidal state:', state)
-        setTidalState(state)
-
-        // 3. Test station search
-        const liverpool = await searchStations('Liverpool')
-        const london = await searchStations('London')
-        console.log('Search "Liverpool":', liverpool.map((s) => s.name))
-        console.log('Search "London":', london.map((s) => s.name))
-        setSearchResults({
-          stations: [...liverpool.slice(0, 3), ...london.slice(0, 3)],
-        })
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err)
-        console.error('Verification error:', msg)
-        setError(msg)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    verify()
+    setHasSeenWelcome(localStorage.getItem('hasSeenWelcome') === 'true')
   }, [])
 
-  if (loading) {
+  // For returning users — device geolocation
+  const geoLocation = useGeolocation(hasSeenWelcome === true && !welcomeLocation)
+
+  // Active location: welcome-provided or geolocation
+  const activeLocation = welcomeLocation ?? geoLocation
+
+  // Tidal state from hook (recomputes every 60s)
+  const { tidalState, isLoading, error } = useTidalState(activeLocation)
+
+  // Display state: live hook state, or initial state from welcome while loading
+  const displayState = tidalState ?? initialState
+
+  const handleWelcomeComplete = useCallback(
+    (loc: GeoLocation, state?: TidalState) => {
+      setWelcomeLocation(loc)
+      if (state) setInitialState(state)
+      setHasSeenWelcome(true)
+    },
+    []
+  )
+
+  const now = useMemo(() => new Date(), [])
+
+  const phaseColour = displayState
+    ? getPhaseColour(displayState.currentPhase)
+    : undefined
+
+  // Compute tide-shaped breath timings
+  const cycleDuration = DURATION.BREATH_CYCLE / breathSpeed
+  const breathTimings = useMemo(
+    () => displayState ? getBreathTimings(displayState.currentPhase, cycleDuration) : null,
+    [displayState, cycleDuration]
+  )
+
+  // --- Render ---
+
+  // Still checking localStorage
+  if (hasSeenWelcome === null) {
     return (
-      <div style={{ padding: 32, fontFamily: 'monospace', color: '#ccc', background: '#111', minHeight: '100vh' }}>
-        <h1>Tide Resonance — Data Verification</h1>
-        <p>Loading tidal predictions for Whitby...</p>
+      <div>
+        <OceanBackground />
       </div>
     )
   }
 
-  if (error) {
+  // First-time user — welcome flow
+  if (!hasSeenWelcome) {
     return (
-      <div style={{ padding: 32, fontFamily: 'monospace', color: '#f66', background: '#111', minHeight: '100vh' }}>
-        <h1>Tide Resonance — Error</h1>
-        <pre>{error}</pre>
+      <div>
+        <OceanBackground />
+        <Welcome onComplete={handleWelcomeComplete} />
       </div>
     )
   }
 
+  // Main app — single screen, no scroll
   return (
-    <div style={{ padding: 32, fontFamily: 'monospace', color: '#ccc', background: '#111', minHeight: '100vh', fontSize: 13 }}>
-      <h1 style={{ color: '#0ff', marginBottom: 24 }}>
-        Tide Resonance — Data Verification
-      </h1>
+    <div
+      data-phase={displayState?.currentPhase}
+      style={
+        phaseColour
+          ? ({ '--phase-color': phaseColour } as React.CSSProperties)
+          : undefined
+      }
+    >
+      <OceanBackground />
 
-      <Section title="Nearest Station">
-        <p>{nearestResult}</p>
-      </Section>
+      <main
+        className="relative z-[1]"
+        style={{
+          height: '100dvh',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Loading state */}
+        {isLoading && !displayState && (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <div className="skeleton h-3 w-32 mx-auto mb-4" />
+              <div className="skeleton h-[240px] w-[240px] rounded-full mx-auto" />
+            </div>
+          </div>
+        )}
 
-      {tidalState && (
-        <>
-          <Section title="Station">
-            <pre>{JSON.stringify(tidalState.station, null, 2)}</pre>
-          </Section>
+        {/* Error state */}
+        {error && !displayState && (
+          <div className="flex-1 flex items-center justify-center px-4">
+            <div className="glass-card text-center max-w-sm">
+              <p
+                style={{
+                  fontSize: '1.125rem',
+                  fontWeight: 500,
+                  color: 'var(--text-primary)',
+                  marginBottom: 12,
+                }}
+              >
+                Unable to load tidal data
+              </p>
+              <p
+                style={{
+                  fontSize: '0.875rem',
+                  color: 'var(--text-secondary)',
+                }}
+              >
+                {error}
+              </p>
+            </div>
+          </div>
+        )}
 
-          <Section title="Current State">
-            <Row label="Height" value={`${tidalState.currentHeight.toFixed(3)} m`} />
-            <Row label="Phase" value={tidalState.currentPhase} />
-            <Row label="Phase progress" value={`${(tidalState.phaseProgress * 100).toFixed(1)}%`} />
-            <Row label="Rate of change" value={`${tidalState.rateOfChange.toFixed(3)} m/hr`} />
-          </Section>
+        {/* Main content — loaded */}
+        {displayState && breathTimings && (
+          <>
+            {/* Header — compact, top */}
+            <Header tidalState={displayState} />
 
-          <Section title="Next Extremes">
-            <Row
-              label="Next High"
-              value={
-                tidalState.nextHigh
-                  ? `${tidalState.nextHigh.height.toFixed(3)} m @ ${tidalState.nextHigh.time.toLocaleTimeString()}`
-                  : 'N/A'
-              }
-            />
-            <Row
-              label="Next Low"
-              value={
-                tidalState.nextLow
-                  ? `${tidalState.nextLow.height.toFixed(3)} m @ ${tidalState.nextLow.time.toLocaleTimeString()}`
-                  : 'N/A'
-              }
-            />
-            <Row
-              label="Prev High"
-              value={
-                tidalState.previousHigh
-                  ? `${tidalState.previousHigh.height.toFixed(3)} m @ ${tidalState.previousHigh.time.toLocaleTimeString()}`
-                  : 'N/A'
-              }
-            />
-            <Row
-              label="Prev Low"
-              value={
-                tidalState.previousLow
-                  ? `${tidalState.previousLow.height.toFixed(3)} m @ ${tidalState.previousLow.time.toLocaleTimeString()}`
-                  : 'N/A'
-              }
-            />
-          </Section>
-
-          <Section title={`Today's Extremes (${tidalState.extremes24h.length})`}>
-            {tidalState.extremes24h.map((e, i) => (
-              <Row
-                key={i}
-                label={e.type.toUpperCase()}
-                value={`${e.height.toFixed(3)} m @ ${e.time.toLocaleTimeString()}`}
+            {/* Breath Orb — centred in remaining space */}
+            <div
+              style={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <BreathOrb
+                phase={displayState.currentPhase}
+                timings={breathTimings}
+                enabled={breathEnabled}
               />
-            ))}
-          </Section>
+            </div>
 
-          <Section title={`24h Timeline (${tidalState.timeline24h.length} points)`}>
-            <p style={{ color: '#888' }}>
-              First: {tidalState.timeline24h[0]?.height.toFixed(3)} m @{' '}
-              {tidalState.timeline24h[0]?.time.toLocaleTimeString()}
-            </p>
-            <p style={{ color: '#888' }}>
-              Last: {tidalState.timeline24h[tidalState.timeline24h.length - 1]?.height.toFixed(3)} m @{' '}
-              {tidalState.timeline24h[tidalState.timeline24h.length - 1]?.time.toLocaleTimeString()}
-            </p>
-          </Section>
+            {/* Action Bar — anchored at bottom */}
+            <ActionBar
+              onSettingsOpen={() => setSettingsOpen(true)}
+              onTideInfoOpen={() => setTideInfoOpen(true)}
+              onGuideOpen={() => setGuideOpen(true)}
+            />
+          </>
+        )}
+      </main>
+
+      {/* Bottom Sheets — hidden until tapped */}
+      {displayState && (
+        <>
+          <TideInfoSheet
+            open={tideInfoOpen}
+            onClose={() => setTideInfoOpen(false)}
+            tidalState={displayState}
+            now={now}
+          />
+          <GuideSheet
+            open={guideOpen}
+            onClose={() => setGuideOpen(false)}
+            tidalState={displayState}
+          />
+          <SettingsSheet
+            open={settingsOpen}
+            onClose={() => setSettingsOpen(false)}
+            tidalState={displayState}
+            breathSpeed={breathSpeed}
+            onBreathSpeedChange={setBreathSpeed}
+          />
         </>
       )}
-
-      {searchResults && (
-        <Section title="Station Search Test">
-          {searchResults.stations.map((s, i) => (
-            <Row key={i} label={s.country} value={s.name} />
-          ))}
-        </Section>
-      )}
-
-      <Section title="Raw JSON (scroll)">
-        <pre style={{ maxHeight: 400, overflow: 'auto', fontSize: 11 }}>
-          {JSON.stringify(tidalState, null, 2)}
-        </pre>
-      </Section>
     </div>
-  )
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div style={{ marginBottom: 24 }}>
-      <h2 style={{ color: '#0aa', fontSize: 15, marginBottom: 8, borderBottom: '1px solid #333', paddingBottom: 4 }}>
-        {title}
-      </h2>
-      {children}
-    </div>
-  )
-}
-
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <p style={{ margin: '2px 0' }}>
-      <span style={{ color: '#888', width: 140, display: 'inline-block' }}>{label}:</span>
-      <span style={{ color: '#eee' }}>{value}</span>
-    </p>
   )
 }
