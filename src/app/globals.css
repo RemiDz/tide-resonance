@@ -73,7 +73,7 @@ body {
 }
 
 /* =========================================================================
-   Type Scale — per build doc rules
+   Type Scale
    ========================================================================= */
 
 .text-hero {
@@ -106,25 +106,10 @@ body {
   letter-spacing: 0.1em;
 }
 
-.text-phase-label {
-  font-family: var(--font-body), system-ui, sans-serif;
-  font-size: 0.875rem;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
 .text-data {
   font-family: var(--font-mono), monospace;
   font-size: 0.875rem;
   font-weight: 400;
-}
-
-.text-brand {
-  font-family: var(--font-body), system-ui, sans-serif;
-  font-weight: 200;
-  letter-spacing: 0.3em;
-  text-transform: uppercase;
 }
 
 /* =========================================================================
@@ -247,16 +232,11 @@ body {
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--glass-border);
   border-radius: 20px;
-  padding: 28px 24px;
+  padding: 24px 20px;
   box-shadow:
     0 0 60px color-mix(in srgb, var(--phase-color) 6%, transparent),
     var(--glass-shadow);
   transition: box-shadow 2.5s ease-out, border-color 2.5s ease-out;
-}
-
-.glass-card--subtle {
-  background: var(--glass-bg-subtle);
-  box-shadow: var(--glass-shadow);
 }
 
 /* =========================================================================
@@ -308,47 +288,9 @@ body {
   50% { transform: translateY(0.5px); }
 }
 
-@keyframes breathInhale {
-  0% { transform: scale(0.9); }
-  100% { transform: scale(1.1); }
-}
-
-@keyframes breathExhale {
-  0% { transform: scale(1.1); }
-  100% { transform: scale(0.9); }
-}
-
-@keyframes ringExpand {
-  0% { transform: scale(1); opacity: var(--ring-opacity); }
-  100% { transform: scale(1.15); opacity: calc(var(--ring-opacity) * 0.5); }
-}
-
-@keyframes ringContract {
-  0% { transform: scale(1.15); opacity: calc(var(--ring-opacity) * 0.5); }
-  100% { transform: scale(1); opacity: var(--ring-opacity); }
-}
-
-@keyframes orbCaustic1 {
-  0% { transform: translate(0%, 0%) scale(1); }
-  50% { transform: translate(10%, -8%) scale(1.1); }
-  100% { transform: translate(0%, 0%) scale(1); }
-}
-
-@keyframes orbCaustic2 {
-  0% { transform: translate(0%, 0%) scale(1); }
-  50% { transform: translate(-8%, 12%) scale(0.9); }
-  100% { transform: translate(0%, 0%) scale(1); }
-}
-
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
-}
-
-/* Breath countdown — gentle pulse on number change */
-.breath-countdown {
-  font-variant-numeric: tabular-nums;
-  transition: opacity 0.3s ease-out;
 }
 
 @keyframes shimmer {
@@ -356,53 +298,9 @@ body {
   100% { background-position: 200% 0; }
 }
 
-@keyframes currentSway {
-  0%, 100% { transform: translateX(0); }
-  50% { transform: translateX(3px); }
-}
-
-/* =========================================================================
-   Reduced Motion — blanket disable all ambient animation
-   ========================================================================= */
-
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
-  }
-}
-
-/* =========================================================================
-   Scrollbar — subtle, ocean-themed
-   ========================================================================= */
-
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: var(--abyss-black); }
-::-webkit-scrollbar-thumb { background: var(--trench-blue); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.1); }
-
-* {
-  scrollbar-width: thin;
-  scrollbar-color: var(--trench-blue) var(--abyss-black);
-}
-
-/* =========================================================================
-   Loading skeleton
-   ========================================================================= */
-
-.skeleton {
-  background: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0.02) 0%,
-    rgba(255, 255, 255, 0.05) 50%,
-    rgba(255, 255, 255, 0.02) 100%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 2s ease-in-out infinite;
-  border-radius: 0.5rem;
+@keyframes heroWaveDrift {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-200px); }
 }
 
 /* =========================================================================
@@ -414,7 +312,7 @@ body {
 }
 
 /* =========================================================================
-   Bottom Sheet — slide-up overlay with glass backdrop
+   Bottom Sheet — slide-up overlay with glass backdrop (kept for station picker)
    ========================================================================= */
 
 @keyframes slideUp {
@@ -483,54 +381,45 @@ body {
 }
 
 /* =========================================================================
-   Action Bar — 3 icon buttons, centred row
+   Reduced Motion — blanket disable all ambient animation
    ========================================================================= */
 
-.action-bar {
-  display: flex;
-  justify-content: center;
-  gap: 32px;
-  padding: 16px 0 32px;
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
 }
 
-.action-bar-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 8px 12px;
-  border-radius: 12px;
-  transition: background 0.3s ease;
+/* =========================================================================
+   Scrollbar — subtle, ocean-themed
+   ========================================================================= */
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--abyss-black); }
+::-webkit-scrollbar-thumb { background: var(--trench-blue); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.1); }
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--trench-blue) var(--abyss-black);
 }
 
-.action-bar-btn:hover,
-.action-bar-btn:active {
-  background: rgba(255, 255, 255, 0.04);
-}
+/* =========================================================================
+   Loading skeleton
+   ========================================================================= */
 
-.action-bar-btn__icon {
-  font-size: 20px;
-  color: rgba(255, 255, 255, 0.3);
-  transition: color 0.3s ease;
-  line-height: 1;
-}
-
-.action-bar-btn__label {
-  font-family: var(--font-mono), monospace;
-  font-size: 0.5625rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: rgba(255, 255, 255, 0.25);
-  transition: color 0.3s ease;
-}
-
-.action-bar-btn--active .action-bar-btn__icon {
-  color: var(--phase-color);
-}
-
-.action-bar-btn--active .action-bar-btn__label {
-  color: rgba(255, 255, 255, 0.5);
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.02) 0%,
+    rgba(255, 255, 255, 0.05) 50%,
+    rgba(255, 255, 255, 0.02) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s ease-in-out infinite;
+  border-radius: 0.5rem;
 }

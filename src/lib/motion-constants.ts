@@ -27,10 +27,6 @@ export const DURATION = {
   CAUSTIC_2: 31,
   // Phase colour transition
   PHASE_TRANSITION: 2.5,
-  // Breath defaults
-  BREATH_CYCLE: 24,
-  BREATH_MIN: 16,
-  BREATH_MAX: 32,
 } as const
 
 export const PARTICLES = {

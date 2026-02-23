@@ -25,7 +25,7 @@ const jetbrains = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: "Tide Resonance",
-  description: "Real ocean tides mapped to breathing rhythms and sound",
+  description: "Live tidal data for sound healing practitioners",
 };
 
 export const viewport: Viewport = {

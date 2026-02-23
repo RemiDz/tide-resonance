@@ -1,35 +1,28 @@
 'use client'
 
-import { useMemo, useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import type { GeoLocation, TidalState } from '@/types/tidal'
 import { useTidalState } from '@/hooks/useTidalState'
 import { useGeolocation } from '@/hooks/useGeolocation'
 import { getPhaseColour } from '@/lib/colour-utils'
-import { getBreathTimings } from '@/lib/breath-ratios'
-import { DURATION } from '@/lib/motion-constants'
 import { OceanBackground } from '@/components/OceanBackground'
 import { Welcome } from '@/components/Welcome'
 import { Header } from '@/components/Header'
-import { BreathOrb } from '@/components/BreathOrb'
-import { ActionBar } from '@/components/ActionBar'
-import { GuideSheet } from '@/components/GuideSheet'
-import { TideInfoSheet } from '@/components/TideInfoSheet'
-import { SettingsSheet } from '@/components/SettingsSheet'
+import { HeroSection } from '@/components/HeroSection'
+import { TidalEnergyCard } from '@/components/cards/TidalEnergyCard'
+import { CurrentTideCard } from '@/components/cards/CurrentTideCard'
+import { TideTimesCard } from '@/components/cards/TideTimesCard'
+import { NextTurnCard } from '@/components/cards/NextTurnCard'
+import { TidalCurveCard } from '@/components/cards/TidalCurveCard'
+import { StationInfoCard } from '@/components/cards/StationInfoCard'
+import { TidalCalendar } from '@/components/TidalCalendar'
+import { Footer } from '@/components/Footer'
 
 export default function TideResonancePage() {
   // --- Welcome flow state ---
   const [hasSeenWelcome, setHasSeenWelcome] = useState<boolean | null>(null)
   const [welcomeLocation, setWelcomeLocation] = useState<GeoLocation | null>(null)
   const [initialState, setInitialState] = useState<TidalState | null>(null)
-
-  // --- Sheet state ---
-  const [guideOpen, setGuideOpen] = useState(false)
-  const [tideInfoOpen, setTideInfoOpen] = useState(false)
-  const [settingsOpen, setSettingsOpen] = useState(false)
-
-  // --- Breath state ---
-  const [breathSpeed, setBreathSpeed] = useState(1.0)
-  const [breathEnabled] = useState(true)
 
   // Check localStorage on mount
   useEffect(() => {
@@ -57,18 +50,9 @@ export default function TideResonancePage() {
     []
   )
 
-  const now = useMemo(() => new Date(), [])
-
   const phaseColour = displayState
     ? getPhaseColour(displayState.currentPhase)
     : undefined
-
-  // Compute tide-shaped breath timings
-  const cycleDuration = DURATION.BREATH_CYCLE / breathSpeed
-  const breathTimings = useMemo(
-    () => displayState ? getBreathTimings(displayState.currentPhase, cycleDuration) : null,
-    [displayState, cycleDuration]
-  )
 
   // --- Render ---
 
@@ -91,7 +75,7 @@ export default function TideResonancePage() {
     )
   }
 
-  // Main app — single screen, no scroll
+  // Main app — scrollable card layout
   return (
     <div
       data-phase={displayState?.currentPhase}
@@ -106,26 +90,39 @@ export default function TideResonancePage() {
       <main
         className="relative z-[1]"
         style={{
-          height: '100dvh',
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
+          minHeight: '100dvh',
+          paddingBottom: 'env(safe-area-inset-bottom)',
         }}
       >
         {/* Loading state */}
         {isLoading && !displayState && (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center">
-              <div className="skeleton h-3 w-32 mx-auto mb-4" />
-              <div className="skeleton h-[240px] w-[240px] rounded-full mx-auto" />
+          <div
+            style={{
+              minHeight: '100dvh',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <div style={{ textAlign: 'center' }}>
+              <div className="skeleton" style={{ height: 12, width: 128, margin: '0 auto 16px' }} />
+              <div className="skeleton" style={{ height: 200, width: '80vw', maxWidth: 360, borderRadius: 20 }} />
             </div>
           </div>
         )}
 
         {/* Error state */}
         {error && !displayState && (
-          <div className="flex-1 flex items-center justify-center px-4">
-            <div className="glass-card text-center max-w-sm">
+          <div
+            style={{
+              minHeight: '100dvh',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '0 16px',
+            }}
+          >
+            <div className="glass-card" style={{ textAlign: 'center', maxWidth: 320 }}>
               <p
                 style={{
                   fontSize: '1.125rem',
@@ -149,60 +146,35 @@ export default function TideResonancePage() {
         )}
 
         {/* Main content — loaded */}
-        {displayState && breathTimings && (
+        {displayState && (
           <>
-            {/* Header — compact, top */}
-            <Header tidalState={displayState} />
+            <Header />
+            <HeroSection tidalState={displayState} />
 
-            {/* Breath Orb — centred in remaining space */}
+            {/* Card Stack */}
             <div
               style={{
-                flex: 1,
                 display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
+                flexDirection: 'column',
+                gap: 16,
+                padding: '24px 20px',
               }}
             >
-              <BreathOrb
-                phase={displayState.currentPhase}
-                timings={breathTimings}
-                enabled={breathEnabled}
-              />
+              <TidalEnergyCard phase={displayState.currentPhase} />
+              <CurrentTideCard tidalState={displayState} />
+              <TideTimesCard tidalState={displayState} />
+              <NextTurnCard tidalState={displayState} />
+              <TidalCurveCard tidalState={displayState} />
+              <StationInfoCard tidalState={displayState} />
             </div>
 
-            {/* Action Bar — anchored at bottom */}
-            <ActionBar
-              onSettingsOpen={() => setSettingsOpen(true)}
-              onTideInfoOpen={() => setTideInfoOpen(true)}
-              onGuideOpen={() => setGuideOpen(true)}
-            />
+            {/* 7-Day Calendar */}
+            <TidalCalendar station={displayState.station} />
+
+            <Footer />
           </>
         )}
       </main>
-
-      {/* Bottom Sheets — hidden until tapped */}
-      {displayState && (
-        <>
-          <TideInfoSheet
-            open={tideInfoOpen}
-            onClose={() => setTideInfoOpen(false)}
-            tidalState={displayState}
-            now={now}
-          />
-          <GuideSheet
-            open={guideOpen}
-            onClose={() => setGuideOpen(false)}
-            tidalState={displayState}
-          />
-          <SettingsSheet
-            open={settingsOpen}
-            onClose={() => setSettingsOpen(false)}
-            tidalState={displayState}
-            breathSpeed={breathSpeed}
-            onBreathSpeedChange={setBreathSpeed}
-          />
-        </>
-      )}
     </div>
   )
 }
