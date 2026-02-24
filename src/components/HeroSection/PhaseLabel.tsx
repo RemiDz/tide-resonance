@@ -51,41 +51,6 @@ export function PhaseLabel({ phaseLabel, stationName, onStationTap }: PhaseLabel
           {phaseLabel}
         </div>
 
-        {/* Live badge */}
-        <div
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            marginTop: 8,
-            padding: '3px 10px',
-            borderRadius: 12,
-            background: 'rgba(255, 255, 255, 0.04)',
-          }}
-        >
-          <span
-            style={{
-              display: 'inline-block',
-              width: 6,
-              height: 6,
-              borderRadius: '50%',
-              background: '#4caf50',
-              animation: 'bioPulse 2s ease-in-out infinite',
-            }}
-          />
-          <span
-            style={{
-              fontFamily: 'var(--font-jetbrains), monospace',
-              fontSize: '0.5625rem',
-              letterSpacing: '0.12em',
-              textTransform: 'uppercase',
-              color: 'var(--text-muted)',
-            }}
-          >
-            Live
-          </span>
-        </div>
-
         {/* Station name */}
         <div>
           <button

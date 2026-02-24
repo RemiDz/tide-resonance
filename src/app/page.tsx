@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import type { GeoLocation, TidalState } from '@/types/tidal'
 import { useTidalState } from '@/hooks/useTidalState'
 import { useGeolocation } from '@/hooks/useGeolocation'
+import { useSettings } from '@/hooks/useSettings'
 import { getPhaseColour } from '@/lib/colour-utils'
 import { OceanBackground } from '@/components/OceanBackground'
 import { Welcome } from '@/components/Welcome'
@@ -15,9 +16,14 @@ import { TideTimesCard } from '@/components/cards/TideTimesCard'
 import { NextTurnCard } from '@/components/cards/NextTurnCard'
 import { StationInfoCard } from '@/components/cards/StationInfoCard'
 import { TidalCalendar } from '@/components/TidalCalendar'
+import { SettingsSheet } from '@/components/SettingsSheet'
 import { Footer } from '@/components/Footer'
 
 export default function TideResonancePage() {
+  // --- Settings ---
+  const { settings, updateSetting } = useSettings()
+  const [settingsOpen, setSettingsOpen] = useState(false)
+
   // --- Welcome flow state ---
   const [hasSeenWelcome, setHasSeenWelcome] = useState<boolean | null>(null)
   const [welcomeLocation, setWelcomeLocation] = useState<GeoLocation | null>(null)
@@ -48,6 +54,10 @@ export default function TideResonancePage() {
     },
     []
   )
+
+  const handleRelocate = useCallback(() => {
+    setWelcomeLocation(null)
+  }, [])
 
   const phaseColour = displayState
     ? getPhaseColour(displayState.currentPhase)
@@ -90,6 +100,7 @@ export default function TideResonancePage() {
         className="relative z-[1]"
         style={{
           minHeight: '100dvh',
+          paddingTop: 'calc(48px + env(safe-area-inset-top, 0px))',
           paddingBottom: 'env(safe-area-inset-bottom)',
         }}
       >
@@ -147,7 +158,7 @@ export default function TideResonancePage() {
         {/* Main content — loaded */}
         {displayState && (
           <>
-            <Header />
+            <Header onOpenSettings={() => setSettingsOpen(true)} />
             <HeroSection tidalState={displayState} />
 
             {/* Card Stack */}
@@ -170,6 +181,15 @@ export default function TideResonancePage() {
             <TidalCalendar station={displayState.station} />
 
             <Footer />
+
+            <SettingsSheet
+              open={settingsOpen}
+              onClose={() => setSettingsOpen(false)}
+              station={displayState.station}
+              settings={settings}
+              onUpdateSetting={updateSetting}
+              onRelocate={handleRelocate}
+            />
           </>
         )}
       </main>
