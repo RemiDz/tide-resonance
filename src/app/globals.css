@@ -348,8 +348,9 @@ body {
   left: 0;
   right: 0;
   z-index: 51;
-  max-height: 75vh;
+  max-height: 80vh;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   background: var(--glass-bg);
   backdrop-filter: blur(30px);
   -webkit-backdrop-filter: blur(30px);
@@ -373,6 +374,28 @@ body {
   border-radius: 2px;
   background: rgba(255, 255, 255, 0.15);
   margin: 0 auto 16px;
+}
+
+/* =========================================================================
+   Volume Slider — custom thumb styling
+   ========================================================================= */
+
+.volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--phase-color);
+  cursor: pointer;
+}
+
+.volume-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: none;
+  background: var(--phase-color);
+  cursor: pointer;
 }
 
 /* =========================================================================

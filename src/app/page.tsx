@@ -5,6 +5,8 @@ import type { GeoLocation, TidalState } from '@/types/tidal'
 import { useTidalState } from '@/hooks/useTidalState'
 import { useGeolocation } from '@/hooks/useGeolocation'
 import { useSettings } from '@/hooks/useSettings'
+import { useAudioDrone } from '@/hooks/useAudioDrone'
+import { useTideNotifications } from '@/hooks/useTideNotifications'
 import { getPhaseColour } from '@/lib/colour-utils'
 import { OceanBackground } from '@/components/OceanBackground'
 import { Welcome } from '@/components/Welcome'
@@ -23,6 +25,9 @@ export default function TideResonancePage() {
   // --- Settings ---
   const { settings, updateSetting } = useSettings()
   const [settingsOpen, setSettingsOpen] = useState(false)
+
+  // --- Audio + Notifications ---
+  useAudioDrone(settings)
 
   // --- Welcome flow state ---
   const [hasSeenWelcome, setHasSeenWelcome] = useState<boolean | null>(null)
@@ -46,6 +51,9 @@ export default function TideResonancePage() {
   // Display state: live hook state, or initial state from welcome while loading
   const displayState = tidalState ?? initialState
 
+  // Notifications (needs displayState)
+  const { permissionState: notificationPermission } = useTideNotifications(settings, displayState)
+
   const handleWelcomeComplete = useCallback(
     (loc: GeoLocation, state?: TidalState) => {
       setWelcomeLocation(loc)
@@ -57,6 +65,10 @@ export default function TideResonancePage() {
 
   const handleRelocate = useCallback(() => {
     setWelcomeLocation(null)
+  }, [])
+
+  const handleSelectStation = useCallback((lat: number, lon: number) => {
+    setWelcomeLocation({ latitude: lat, longitude: lon, source: 'manual' })
   }, [])
 
   const phaseColour = displayState
@@ -188,7 +200,9 @@ export default function TideResonancePage() {
               station={displayState.station}
               settings={settings}
               onUpdateSetting={updateSetting}
+              onSelectStation={handleSelectStation}
               onRelocate={handleRelocate}
+              notificationPermission={notificationPermission}
             />
           </>
         )}

@@ -15,7 +15,17 @@ function detectTimeFormat(): '12h' | '24h' {
 }
 
 function loadSettings(): Settings {
-  const defaults: Settings = { units: 'metres', timeFormat: detectTimeFormat() }
+  const defaults: Settings = {
+    units: 'metres',
+    timeFormat: detectTimeFormat(),
+    droneEnabled: false,
+    droneVolume: 50,
+    droneFrequency: 432,
+    alertsEnabled: false,
+    alertTiming: 30,
+    alertHigh: true,
+    alertLow: true,
+  }
   try {
     const stored = localStorage.getItem(STORAGE_KEY)
     if (stored) {
