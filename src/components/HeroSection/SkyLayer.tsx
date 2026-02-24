@@ -1,6 +1,5 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import type { SkyState } from '@/lib/sky-utils'
 import type { TidalPhase } from '@/types/tidal'
 
@@ -9,26 +8,82 @@ interface SkyLayerProps {
   currentPhase: TidalPhase
 }
 
+function PhaseIndicator({ phase }: { phase: TidalPhase }) {
+  const isRising = phase === 'RISING'
+  const isFalling = phase === 'FALLING'
+  const isSlack = phase === 'HIGH_SLACK' || phase === 'LOW_SLACK'
+
+  if (isSlack) {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 4,
+          opacity: 0.3,
+        }}
+      >
+        <div
+          style={{
+            width: 12,
+            height: 1,
+            background: 'rgba(255, 255, 255, 0.5)',
+          }}
+        />
+        <div
+          style={{
+            width: 12,
+            height: 1,
+            background: 'rgba(255, 255, 255, 0.5)',
+          }}
+        />
+      </div>
+    )
+  }
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 1,
+      }}
+    >
+      {[0, 1, 2].map((i) => (
+        <svg
+          key={i}
+          width="16"
+          height="8"
+          viewBox="0 0 16 8"
+          style={{
+            opacity: 0,
+            animation: 'chevronPulse 2.5s ease-in-out infinite',
+            animationDelay: isRising
+              ? `${(2 - i) * 0.3}s`
+              : `${i * 0.3}s`,
+          }}
+        >
+          <path
+            d={isRising ? 'M2 6 L8 2 L14 6' : 'M2 2 L8 6 L14 2'}
+            stroke={isFalling ? 'rgba(121, 134, 203, 0.6)' : 'rgba(79, 195, 247, 0.6)'}
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            fill="none"
+          />
+        </svg>
+      ))}
+    </div>
+  )
+}
+
 export function SkyLayer({ skyState, currentPhase }: SkyLayerProps) {
   const [g0, g1, g2] = skyState.skyGradient
   const showMoon = skyState.moonAltitude > 0
 
   // Moon crescent offset: 0 = new moon (fully shadowed), 0.5 = full (no shadow)
   const moonOffset = Math.cos(skyState.moonPhase * 2 * Math.PI)
-
-  const isRising = currentPhase === 'RISING'
-  const isFalling = currentPhase === 'FALLING'
-  const showChevron = isRising || isFalling
-
-  // Pulse animation for rising chevron
-  const [chevronOpacity, setChevronOpacity] = useState(0.5)
-  useEffect(() => {
-    if (!isRising) return
-    const id = setInterval(() => {
-      setChevronOpacity((prev) => (prev === 0.5 ? 0.3 : 0.5))
-    }, 2000)
-    return () => clearInterval(id)
-  }, [isRising])
 
   return (
     <>
@@ -92,41 +147,16 @@ export function SkyLayer({ skyState, currentPhase }: SkyLayerProps) {
         </svg>
       )}
 
-      {/* Phase direction chevron */}
-      {showChevron && (
-        <svg
-          width="14"
-          height="14"
-          viewBox="0 0 14 14"
-          style={{
-            position: 'absolute',
-            top: '14%',
-            left: '10%',
-            opacity: isRising ? chevronOpacity : 0.5,
-            transition: 'opacity 1s ease',
-          }}
-        >
-          {isRising ? (
-            <polyline
-              points="3,10 7,4 11,10"
-              fill="none"
-              stroke="rgba(255,255,255,0.6)"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          ) : (
-            <polyline
-              points="3,4 7,10 11,4"
-              fill="none"
-              stroke="rgba(255,255,255,0.6)"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          )}
-        </svg>
-      )}
+      {/* Phase direction indicator — animated chevrons */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '14%',
+          left: '10%',
+        }}
+      >
+        <PhaseIndicator phase={currentPhase} />
+      </div>
     </>
   )
 }

@@ -26,8 +26,7 @@ export default function TideResonancePage() {
   const { settings, updateSetting } = useSettings()
   const [settingsOpen, setSettingsOpen] = useState(false)
 
-  // --- Audio + Notifications ---
-  useAudioDrone(settings)
+  // --- Audio + Notifications (drone hook called after displayState below) ---
 
   // --- Welcome flow state ---
   const [hasSeenWelcome, setHasSeenWelcome] = useState<boolean | null>(null)
@@ -51,7 +50,8 @@ export default function TideResonancePage() {
   // Display state: live hook state, or initial state from welcome while loading
   const displayState = tidalState ?? initialState
 
-  // Notifications (needs displayState)
+  // Audio drone + notifications (both need displayState)
+  useAudioDrone(settings, displayState)
   const { permissionState: notificationPermission } = useTideNotifications(settings, displayState)
 
   const handleWelcomeComplete = useCallback(
