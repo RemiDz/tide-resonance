@@ -13,7 +13,6 @@ import { TidalEnergyCard } from '@/components/cards/TidalEnergyCard'
 import { CurrentTideCard } from '@/components/cards/CurrentTideCard'
 import { TideTimesCard } from '@/components/cards/TideTimesCard'
 import { NextTurnCard } from '@/components/cards/NextTurnCard'
-import { TidalCurveCard } from '@/components/cards/TidalCurveCard'
 import { StationInfoCard } from '@/components/cards/StationInfoCard'
 import { TidalCalendar } from '@/components/TidalCalendar'
 import { Footer } from '@/components/Footer'
@@ -164,7 +163,6 @@ export default function TideResonancePage() {
               <CurrentTideCard tidalState={displayState} />
               <TideTimesCard tidalState={displayState} />
               <NextTurnCard tidalState={displayState} />
-              <TidalCurveCard tidalState={displayState} />
               <StationInfoCard tidalState={displayState} />
             </div>
 

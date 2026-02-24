@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd /c/Users/rdzingel/Documents/MY_APPS/HARMONIC_WAVES/tideresonance.app && npx create-next-app@latest . --typescript --tailwind --app --src-dir --no-import-alias --eslint 2>&1)",
+      "Bash(npx create-next-app@latest:*)",
+      "Bash(cd /c/Users/rdzingel/Documents/MY_APPS/HARMONIC_WAVES/tideresonance.app && npm install 2>&1)",
+      "Bash(cd /c/Users/rdzingel/Documents/MY_APPS/HARMONIC_WAVES/tideresonance.app && git init && git remote add origin https://github.com/RemiDz/tide-resonance.git 2>&1)",
+      "Bash(cd /c/Users/rdzingel/Documents/MY_APPS/HARMONIC_WAVES/tideresonance.app && npm install @neaps/tide-predictor @neaps/tide-database framer-motion 2>&1)",
+      "Bash(head:*)",
+      "Bash(cd /c/Users/rdzingel/Documents/MY_APPS/HARMONIC_WAVES/tideresonance.app && node -e \"\nconst { createTidePredictor } = require\\('@neaps/tide-predictor'\\);\nconst { nearest, search, stations } = require\\('@neaps/tide-database'\\);\n\n// Test 1: Find nearest station to Whitby\nconsole.log\\('=== TEST 1: Find Nearest Station to Whitby \\(54.486, -0.615\\) ==='\\);\nconst result = nearest\\({ latitude: 54.486, longitude: -0.615 }\\);\nif \\(!result\\) { console.log\\('No station found!'\\); process.exit\\(1\\); }\nconst [station, dist] = result;\nconsole.log\\('Station:', station.name\\);\nconsole.log\\('ID:', station.id\\);\nconsole.log\\('Type:', station.type\\);\nconsole.log\\('Distance:', dist.toFixed\\(1\\), 'km'\\);\nconsole.log\\('Coords:', station.latitude, station.longitude\\);\nconsole.log\\('Country:', station.country\\);\nconsole.log\\('Timezone:', station.timezone\\);\nconsole.log\\(''\\);\n\n// Test 2: Get predictions\nconsole.log\\('=== TEST 2: Tide Predictions ==='\\);\nlet constituents, offsets;\nif \\(station.type === 'reference'\\) {\n  constituents = station.harmonic_constituents;\n} else if \\(station.offsets\\) {\n  const ref = stations.find\\(s => s.id === station.offsets.reference\\);\n  console.log\\('Reference station:', ref.name, ref.id\\);\n  constituents = ref.harmonic_constituents;\n  offsets = station.offsets;\n}\n\nconst predictor = createTidePredictor\\(constituents\\);\n\nconst now = new Date\\(\\);\nconst start = new Date\\(now\\); start.setDate\\(start.getDate\\(\\) - 1\\); start.setHours\\(0,0,0,0\\);\nconst end = new Date\\(now\\); end.setDate\\(end.getDate\\(\\) + 1\\); end.setHours\\(23,59,59,999\\);\n\nconst extremes = predictor.getExtremesPrediction\\({\n  start, end,\n  labels: { high: 'High', low: 'Low' },\n  ...\\(offsets ? { offsets: { height: offsets.height, time: offsets.time } } : {}\\)\n}\\);\n\nconsole.log\\('Extremes \\(' + extremes.length + ' total\\):'\\);\nextremes.forEach\\(e => {\n  const t = e.time;\n  const dateStr = t.toLocaleDateString\\('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }\\);\n  const timeStr = t.toLocaleTimeString\\('en-GB', { hour: '2-digit', minute: '2-digit' }\\);\n  console.log\\('  ' + e.label + ': ' + e.level.toFixed\\(2\\) + 'm @ ' + dateStr + ' ' + timeStr\\);\n}\\);\n\n// Test 3: Current height\nconst current = predictor.getWaterLevelAtTime\\({ time: now }\\);\nconsole.log\\(''\\);\nconsole.log\\('Current height at', now.toLocaleTimeString\\('en-GB'\\) + ':', current.level.toFixed\\(3\\), 'm'\\);\n\n// Test 4: Timeline\nconst tlStart = new Date\\(now\\); tlStart.setHours\\(0,0,0,0\\);\nconst tlEnd = new Date\\(now\\); tlEnd.setHours\\(23,59,59,999\\);\nconst timeline = predictor.getTimelinePrediction\\({ start: tlStart, end: tlEnd, timeFidelity: 600 }\\);\nconsole.log\\('Timeline points:', timeline.length\\);\nconsole.log\\(''\\);\n\n// Test 5: Station search\nconsole.log\\('=== TEST 3: Station Search ==='\\);\nconst liverpool = search\\('Liverpool'\\);\nconsole.log\\('Liverpool:', liverpool.slice\\(0,3\\).map\\(s => s.name + ' \\(' + s.country + '\\)'\\)\\);\nconst london = search\\('London'\\);\nconsole.log\\('London:', london.slice\\(0,3\\).map\\(s => s.name + ' \\(' + s.country + '\\)'\\)\\);\nconst sanfran = search\\('San Francisco'\\);\nconsole.log\\('San Francisco:', sanfran.slice\\(0,3\\).map\\(s => s.name + ' \\(' + s.country + '\\)'\\)\\);\n\n// Test 6: UK coordinates nearest\nconsole.log\\(''\\);\nconsole.log\\('=== TEST 4: Nearest to Central London \\(51.507, -0.127\\) ==='\\);\nconst londonNearest = nearest\\({ latitude: 51.507, longitude: -0.127 }\\);\nif \\(londonNearest\\) {\n  console.log\\('Station:', londonNearest[0].name, '\\(' + londonNearest[1].toFixed\\(1\\) + ' km\\)'\\);\n}\n\nconsole.log\\(''\\);\nconsole.log\\('Total stations in database:', stations.length\\);\n\" 2>&1)",
+      "WebFetch(domain:www.tidetimes.org.uk)",
+      "Bash(cd:*)",
+      "Bash(cd /c/Users/rdzingel/Documents/MY_APPS/HARMONIC_WAVES/tideresonance.app && git push -u origin master 2>&1)",
+      "Bash(cd /c/Users/rdzingel/Documents/MY_APPS/HARMONIC_WAVES/tideresonance.app && npx tsc --noEmit 2>&1)",
+      "Bash(cd /c/Users/rdzingel/Documents/MY_APPS/HARMONIC_WAVES/tideresonance.app && npm run build 2>&1)",
+      "Bash(true:*)",
+      "Bash(echo vercel CLI not found:*)",
+      "Bash(npx vercel:*)",
+      "WebFetch(domain:tideresonanceapp.vercel.app)",
+      "Bash(curl:*)",
+      "Bash(cd \"C:\\\\Users\\\\rdzingel\\\\Documents\\\\MY_APPS\\\\HARMONIC_WAVES\\\\tideresonance.app\" && npm run build 2>&1)",
+      "Bash(find:*)",
+      "Bash(cd \"C:/Users/rdzingel/Documents/MY_APPS/HARMONIC_WAVES/tideresonance.app\" && npm run build 2>&1)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "Bash(tail:*)"
+    ]
+  }
+}
