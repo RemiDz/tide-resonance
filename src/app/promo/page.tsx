@@ -328,7 +328,7 @@ export default function PromoPage() {
                     }}
                     title="Download this card"
                   >
-                    \u2193
+                    {'\u2193'}
                   </button>
                 </div>
               ))}
