@@ -1,74 +1,71 @@
 'use client'
 
+import { FONT_DISPLAY, FONT_MONO } from './CardShell'
+
 interface CardFooterProps {
-  phaseColor: string
   cardNum: number
-  totalCards: number
-  dateStr: string
+  isStory: boolean
+  color: string
 }
 
-export function CardFooter({ phaseColor, cardNum, totalCards, dateStr }: CardFooterProps) {
+export function CardFooter({ cardNum, isStory, color }: CardFooterProps) {
+  const dateStr = new Date().toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
+
   return (
-    <div
-      style={{
-        padding: '0 32px 24px',
-        marginTop: 'auto',
-      }}
-    >
+    <div style={{ marginTop: 'auto', width: '100%', textAlign: 'center' as const }}>
       {/* Gradient divider */}
       <div
         style={{
+          width: '60%',
           height: 1,
-          background: `linear-gradient(90deg, transparent, ${phaseColor}40, transparent)`,
-          marginBottom: 16,
+          background: `linear-gradient(90deg, transparent, ${color}50, transparent)`,
+          margin: '0 auto',
+          marginBottom: isStory ? 12 : 8,
         }}
       />
-
-      {/* Branding */}
-      <div style={{ textAlign: 'center' }}>
-        <div
-          style={{
-            fontFamily: "'Playfair Display', serif",
-            fontSize: 16,
-            fontWeight: 600,
-            color: 'rgba(255,255,255,0.8)',
-            letterSpacing: '0.02em',
-          }}
-        >
-          tidara.app
-        </div>
-        <div
-          style={{
-            fontFamily: "'JetBrains Mono', monospace",
-            fontSize: 10,
-            color: 'rgba(255,255,255,0.3)',
-            marginTop: 4,
-          }}
-        >
-          {dateStr}
-        </div>
-
-        {/* Page dots */}
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'center',
-            gap: 6,
-            marginTop: 12,
-          }}
-        >
-          {Array.from({ length: totalCards }, (_, i) => (
-            <div
-              key={i}
-              style={{
-                width: 6,
-                height: 6,
-                borderRadius: '50%',
-                background: i + 1 === cardNum ? phaseColor : 'rgba(255,255,255,0.2)',
-              }}
-            />
-          ))}
-        </div>
+      {/* App name */}
+      <p
+        style={{
+          fontSize: 13,
+          fontWeight: 700,
+          color: '#F0EEF8',
+          marginBottom: 3,
+          marginTop: 0,
+          fontFamily: FONT_DISPLAY,
+          letterSpacing: '0.05em',
+        }}
+      >
+        tidara.app
+      </p>
+      {/* Date */}
+      <p
+        style={{
+          fontSize: 7,
+          color: 'rgba(200,196,220,0.6)',
+          marginBottom: 4,
+          marginTop: 0,
+          fontFamily: FONT_MONO,
+        }}
+      >
+        {dateStr}
+      </p>
+      {/* Page dots */}
+      <div style={{ display: 'flex', gap: 5, justifyContent: 'center', marginTop: 4 }}>
+        {Array.from({ length: 6 }, (_, i) => (
+          <div
+            key={i}
+            style={{
+              width: 5,
+              height: 5,
+              borderRadius: '50%',
+              backgroundColor: i === cardNum - 1 ? color : 'rgba(200,196,220,0.2)',
+            }}
+          />
+        ))}
       </div>
     </div>
   )
