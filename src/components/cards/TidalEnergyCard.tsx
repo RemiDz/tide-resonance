@@ -14,7 +14,10 @@ export function TidalEnergyCard({ phase }: TidalEnergyCardProps) {
   const colour = getPhaseColour(phase)
 
   return (
-    <InfoCard title="Tidal Energy">
+    <InfoCard
+      title="Tidal Energy"
+      infoText="The tidal phase reflects the ocean's current energetic quality. As the tide moves through its cycle — rising, peaking, ebbing, and resting — it carries distinct characteristics that coastal cultures have recognised for thousands of years. Many people find that aligning activities with these natural rhythms creates a deeper sense of flow and connection."
+    >
       {/* Phase arrow + name */}
       <div
         style={{

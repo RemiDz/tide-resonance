@@ -288,6 +288,27 @@ body {
   50% { transform: translateY(0.5px); }
 }
 
+/* Info expand — smooth height + fade */
+.info-expand {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 300ms ease-out;
+}
+
+.info-expand[data-open="true"] {
+  grid-template-rows: 1fr;
+}
+
+.info-expand-content {
+  opacity: 0;
+  transition: opacity 200ms ease 0ms;
+}
+
+.info-expand[data-open="true"] .info-expand-content {
+  opacity: 1;
+  transition: opacity 200ms ease 100ms;
+}
+
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }

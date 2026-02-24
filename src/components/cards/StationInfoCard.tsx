@@ -13,7 +13,10 @@ export function StationInfoCard({ tidalState, onChangeStation }: StationInfoCard
   const coordStr = `${Math.abs(station.latitude).toFixed(3)}\u00B0${station.latitude >= 0 ? 'N' : 'S'}, ${Math.abs(station.longitude).toFixed(3)}\u00B0${station.longitude >= 0 ? 'E' : 'W'}`
 
   return (
-    <InfoCard title="Station">
+    <InfoCard
+      title="Station"
+      infoText="Your tidal data is calculated using harmonic analysis — a mathematical method that combines the gravitational effects of the moon, sun, and local geography to predict water levels. This runs entirely on your device with no internet connection needed after the initial load. Data covers over 8,000 coastal stations worldwide."
+    >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <DataRow label="Station" value={station.name} />
         <DataRow label="Distance" value={`${distanceKm.toFixed(0)} km`} />

@@ -15,7 +15,10 @@ export function TideTimesCard({ tidalState }: TideTimesCardProps) {
   const now = Date.now()
 
   return (
-    <InfoCard title="Today's Tides">
+    <InfoCard
+      title="Today's Tides"
+      infoText="These are the predicted times and heights for high and low water at your station today. Tides follow a roughly 12-hour 25-minute cycle, so each day the times shift slightly later. Most locations experience two highs and two lows per day. Actual times may vary slightly due to weather and atmospheric pressure."
+    >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {extremes24h.map((ext, i) => (
           <ExtremeRow key={i} extreme={ext} isPast={ext.time.getTime() < now} colour={colour} />

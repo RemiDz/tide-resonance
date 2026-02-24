@@ -28,7 +28,10 @@ export function CurrentTideCard({ tidalState }: CurrentTideCardProps) {
   const rateAbs = Math.abs(rateOfChange)
 
   return (
-    <InfoCard title="Current Tide">
+    <InfoCard
+      title="Current Tide"
+      infoText="This shows the live state of the tide at your station. Water height is measured from a reference point called chart datum. The rate of change tells you how quickly the water is moving — faster in mid-tide, slowing as it approaches high or low water. The bar shows where the current level sits between today's lowest and highest predicted points."
+    >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <DataRow label="Water Height" value={`${currentHeight.toFixed(2)}m`} />
         <DataRow label="Rate of Change" value={`${rateSign}${rateAbs.toFixed(2)}m/hr`} />
