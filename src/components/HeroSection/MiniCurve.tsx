@@ -78,12 +78,12 @@ export function MiniCurve({ baseY, timeline24h, extremes24h }: MiniCurveProps) {
           />
           <text
             x={ext.x}
-            y={ext.type === 'high' ? ext.y - 6 : ext.y + 10}
+            y={ext.type === 'high' ? ext.y - 10 : ext.y + 16}
             textAnchor="middle"
-            fontSize={7}
+            fontSize={18}
             fontFamily="var(--font-jetbrains), monospace"
             fill="white"
-            fillOpacity={0.2}
+            fillOpacity={0.40}
           >
             {ext.label}
           </text>

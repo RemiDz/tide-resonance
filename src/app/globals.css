@@ -288,11 +288,6 @@ body {
   50% { transform: translateY(0.5px); }
 }
 
-@keyframes chevronPulse {
-  0%, 100% { opacity: 0.1; }
-  40%, 60% { opacity: 0.5; }
-}
-
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }

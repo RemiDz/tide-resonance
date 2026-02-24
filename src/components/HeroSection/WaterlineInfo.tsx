@@ -2,7 +2,6 @@
 
 import { useMemo, useState, useEffect } from 'react'
 import type { TideExtreme } from '@/types/tidal'
-import { formatTime12h, formatTimeUntil } from '@/lib/tidal-narrative'
 
 const SVG_WIDTH = 800
 const SVG_HEIGHT = 400
@@ -11,29 +10,20 @@ interface WaterlineInfoProps {
   baseY: number
   currentHeight: number
   extremes24h: TideExtreme[]
-  nextHigh: TideExtreme | null
-  nextLow: TideExtreme | null
-  currentPhase: string
 }
 
 const TIME_MARKERS = [
   { hour: 6, label: '6AM' },
-  { hour: 9, label: '9AM' },
   { hour: 12, label: '12PM' },
-  { hour: 15, label: '3PM' },
   { hour: 18, label: '6PM' },
-  { hour: 21, label: '9PM' },
 ]
 
 export function WaterlineInfo({
   baseY,
   currentHeight,
   extremes24h,
-  nextHigh,
-  nextLow,
-  currentPhase,
 }: WaterlineInfoProps) {
-  // Countdown ticks every 60s
+  // Tick every 60s for NOW dot position
   const [tick, setTick] = useState(0)
   useEffect(() => {
     const id = setInterval(() => setTick((t) => t + 1), 60_000)
@@ -47,7 +37,6 @@ export function WaterlineInfo({
     const min = Math.min(...heights)
     const max = Math.max(...heights)
     const range = max - min || 1
-    // Map to SVG Y: high tide → 25%, low tide → 75% of SVG_HEIGHT
     const hFrac = range === 0 ? 0.5 : 1
     const lFrac = range === 0 ? 0.5 : 0
     return {
@@ -56,30 +45,12 @@ export function WaterlineInfo({
     }
   }, [extremes24h])
 
-  // Time axis: map hours to SVG X (0–24h → 0–800)
+  // Time axis: map hours to SVG X
   const nowX = useMemo(() => {
     const now = new Date()
     const frac = (now.getHours() * 60 + now.getMinutes()) / (24 * 60)
     return frac * SVG_WIDTH
   }, [tick]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Next event
-  const nextEvent = useMemo(() => {
-    // Find nearest future extreme
-    const now = Date.now()
-    const upcoming = [nextHigh, nextLow].filter(
-      (e): e is TideExtreme => e !== null && e.time.getTime() > now,
-    )
-    if (upcoming.length === 0) return null
-    upcoming.sort((a, b) => a.time.getTime() - b.time.getTime())
-    const event = upcoming[0]
-    return {
-      label: event.type === 'high' ? 'High water' : 'Low water',
-      time: formatTime12h(event.time),
-      countdown: formatTimeUntil(event.time),
-      arrow: event.type === 'high' ? '\u2191' : '\u2193',
-    }
-  }, [nextHigh, nextLow, tick]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <g>
@@ -87,7 +58,7 @@ export function WaterlineInfo({
       {highY !== null && (
         <>
           <line
-            x1={30}
+            x1={40}
             y1={highY}
             x2={SVG_WIDTH - 10}
             y2={highY}
@@ -97,12 +68,12 @@ export function WaterlineInfo({
             strokeDasharray="6 6"
           />
           <text
-            x={10}
-            y={highY + 3}
-            fontSize={7}
+            x={12}
+            y={highY + 5}
+            fontSize={16}
             fontFamily="var(--font-jetbrains), monospace"
             fill="white"
-            fillOpacity={0.25}
+            fillOpacity={0.30}
           >
             H
           </text>
@@ -113,7 +84,7 @@ export function WaterlineInfo({
       {lowY !== null && (
         <>
           <line
-            x1={30}
+            x1={40}
             y1={lowY}
             x2={SVG_WIDTH - 10}
             y2={lowY}
@@ -123,12 +94,12 @@ export function WaterlineInfo({
             strokeDasharray="6 6"
           />
           <text
-            x={10}
-            y={lowY + 3}
-            fontSize={7}
+            x={12}
+            y={lowY + 5}
+            fontSize={16}
             fontFamily="var(--font-jetbrains), monospace"
             fill="white"
-            fillOpacity={0.25}
+            fillOpacity={0.30}
           >
             L
           </text>
@@ -138,12 +109,12 @@ export function WaterlineInfo({
       {/* Height label at water surface */}
       <text
         x={SVG_WIDTH - 16}
-        y={baseY - 8}
+        y={baseY - 10}
         textAnchor="end"
-        fontSize={8}
+        fontSize={20}
         fontFamily="var(--font-jetbrains), monospace"
         fill="white"
-        fillOpacity={0.6}
+        fillOpacity={0.50}
         style={{ transition: 'y 2.5s ease-out' } as React.CSSProperties}
       >
         {currentHeight.toFixed(1)}m
@@ -158,10 +129,10 @@ export function WaterlineInfo({
             x={x}
             y={392}
             textAnchor="middle"
-            fontSize={7}
+            fontSize={16}
             fontFamily="var(--font-jetbrains), monospace"
             fill="white"
-            fillOpacity={0.15}
+            fillOpacity={0.30}
           >
             {tm.label}
           </text>
@@ -176,41 +147,6 @@ export function WaterlineInfo({
         fill="white"
         fillOpacity={0.8}
       />
-
-      {/* Next event callout */}
-      {nextEvent && (
-        <g>
-          {/* Dark scrim background */}
-          <rect
-            x={SVG_WIDTH - 175}
-            y={baseY + 40}
-            width={155}
-            height={32}
-            rx={4}
-            fill="rgba(5,8,16,0.6)"
-          />
-          <text
-            x={SVG_WIDTH - 168}
-            y={baseY + 55}
-            fontSize={7.5}
-            fontFamily="var(--font-jetbrains), monospace"
-            fill="white"
-            fillOpacity={0.5}
-          >
-            {nextEvent.label} {'\u00B7'} {nextEvent.time}
-          </text>
-          <text
-            x={SVG_WIDTH - 168}
-            y={baseY + 67}
-            fontSize={7.5}
-            fontFamily="var(--font-jetbrains), monospace"
-            fill="white"
-            fillOpacity={0.35}
-          >
-            {nextEvent.arrow} in {nextEvent.countdown}
-          </text>
-        </g>
-      )}
     </g>
   )
 }

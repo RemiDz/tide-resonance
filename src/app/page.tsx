@@ -15,7 +15,6 @@ import { HeroSection } from '@/components/HeroSection'
 import { TidalEnergyCard } from '@/components/cards/TidalEnergyCard'
 import { CurrentTideCard } from '@/components/cards/CurrentTideCard'
 import { TideTimesCard } from '@/components/cards/TideTimesCard'
-import { NextTurnCard } from '@/components/cards/NextTurnCard'
 import { StationInfoCard } from '@/components/cards/StationInfoCard'
 import { TidalCalendar } from '@/components/TidalCalendar'
 import { SettingsSheet } from '@/components/SettingsSheet'
@@ -185,7 +184,6 @@ export default function TideResonancePage() {
               <TidalEnergyCard phase={displayState.currentPhase} />
               <CurrentTideCard tidalState={displayState} />
               <TideTimesCard tidalState={displayState} />
-              <NextTurnCard tidalState={displayState} />
               <StationInfoCard tidalState={displayState} />
             </div>
 
