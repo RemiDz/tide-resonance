@@ -382,7 +382,13 @@ body {
   box-shadow:
     0 -4px 40px rgba(0, 0, 0, 0.4),
     0 0 60px color-mix(in srgb, var(--phase-color) 4%, transparent);
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   animation: slideUp 0.3s ease-out forwards;
+}
+
+.bottom-sheet-panel::-webkit-scrollbar {
+  display: none;
 }
 
 .bottom-sheet-panel--closing {
@@ -434,17 +440,18 @@ body {
 }
 
 /* =========================================================================
-   Scrollbar — subtle, ocean-themed
+   Scrollbar — hidden, scroll functionality preserved
    ========================================================================= */
 
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: var(--abyss-black); }
-::-webkit-scrollbar-thumb { background: var(--trench-blue); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.1); }
+html, body {
+  overflow-y: auto;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
 
-* {
-  scrollbar-width: thin;
-  scrollbar-color: var(--trench-blue) var(--abyss-black);
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
 }
 
 /* =========================================================================
