@@ -43,13 +43,11 @@ export default function RootLayout({
       <head>
         {/* Privacy-friendly analytics by Plausible */}
         <Script
-          async
-          src="https://plausible.io/js/pa-B4K9CHK_UaRy2qTFa36MW.js"
+          defer
+          data-domain="tidara.app"
+          src="https://plausible.io/js/script.js"
           strategy="afterInteractive"
         />
-        <Script id="plausible-init" strategy="afterInteractive">
-          {`window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};plausible.init()`}
-        </Script>
       </head>
       <body
         className={`${playfair.variable} ${inter.variable} ${jetbrains.variable} antialiased`}
