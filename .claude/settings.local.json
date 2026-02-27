@@ -23,7 +23,9 @@
       "Bash(cd \"C:/Users/rdzingel/Documents/MY_APPS/HARMONIC_WAVES/tideresonance.app\" && npm run build 2>&1)",
       "WebSearch",
       "WebFetch(domain:github.com)",
-      "Bash(tail:*)"
+      "Bash(tail:*)",
+      "Bash(cd /c/Users/rdzingel/Documents/MY_APPS/HARMONIC_WAVES/tideresonance.app && vercel --prod 2>&1)",
+      "Bash(git:*)"
     ]
   }
 }

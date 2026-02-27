@@ -1,0 +1,2 @@
+Check the useTidalState hook — does it recalculate on an interval or only on mount? Add a 60-second setInterval that silently recalculates all tidal values (current height, phase, rate of change, time to next turn, extremes). Make sure all components that consume this data re-render smoothly. The countdown timer specifically should tick every 60 seconds. The hero water level and curve NOW marker should also update. No loading states, no flash — just silent background updates. Clean up the interval on unmount.
+
