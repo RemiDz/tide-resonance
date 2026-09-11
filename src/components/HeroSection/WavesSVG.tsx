@@ -49,7 +49,7 @@ export function WavesSVG({ baseY, phaseColour, currentPhase, children }: WavesSV
   const pathRefs = useRef<(SVGPathElement | null)[]>([])
   const animRef = useRef<number>(0)
 
-  const animate = useCallback(() => {
+  const animate = useCallback(function animateWaves() {
     const time = performance.now() / 1000
     WAVE_LAYERS.forEach((layer, i) => {
       const path = pathRefs.current[i]
@@ -66,10 +66,11 @@ export function WavesSVG({ baseY, phaseColour, currentPhase, children }: WavesSV
         )
       }
     })
-    animRef.current = requestAnimationFrame(animate)
+    animRef.current = requestAnimationFrame(animateWaves)
   }, [baseY])
 
   useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
     animRef.current = requestAnimationFrame(animate)
     return () => cancelAnimationFrame(animRef.current)
   }, [animate])

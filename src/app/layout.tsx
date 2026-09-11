@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Playfair_Display, Inter, JetBrains_Mono } from "next/font/google";
 
 import "./globals.css";
+import "./tidara.css";
 
 const playfair = Playfair_Display({
   variable: "--font-playfair",
@@ -25,12 +26,15 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Tide Resonance",
-  description: "Live tidal data for sound healing practitioners",
+  title: "Tidara — Follow the ocean’s rhythm",
+  description: "A quieter way to follow the water. Explore predicted tides, find your coast and settle into ocean-inspired sound with Tidara.",
 };
 
 export const viewport: Viewport = {
-  themeColor: "#050810",
+  themeColor: "#07171c",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

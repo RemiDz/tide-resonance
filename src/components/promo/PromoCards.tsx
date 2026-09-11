@@ -6,6 +6,7 @@ import { getPhaseColour, getPhaseLabel, getPhaseArrow } from '@/lib/colour-utils
 import { phaseGuidance } from '@/data/phaseGuidance'
 import { energyGuidance, practitionerAdvice } from '@/data/promoGuidance'
 import { formatTime12h } from '@/lib/tidal-narrative'
+import { stationDateKey, stationDayBounds, formatTideTime } from '@/lib/tide-time'
 import { getExtremes } from '@/lib/tideEngine'
 import { CardShell, FONT_DISPLAY, FONT_BODY, FONT_MONO } from './CardShell'
 import { CardFooter } from './CardFooter'
@@ -40,6 +41,8 @@ const CARD_SLUGS = ['phase', 'conditions', 'energy', 'advice', 'cta', 'forecast'
 const TOTAL_CARDS = 6
 
 export function PromoCards({ tidalState, format, onImagesReady }: PromoCardsProps) {
+  const captureGeneration = useRef(0)
+  const [captureError, setCaptureError] = useState('')
   const cardRefs = useRef<(HTMLDivElement | null)[]>([])
   const [rendering, setRendering] = useState(false)
   const [weekExtremes, setWeekExtremes] = useState<TideExtreme[]>([])
@@ -49,29 +52,34 @@ export function PromoCards({ tidalState, format, onImagesReady }: PromoCardsProp
   const phaseColor = getPhaseColour(tidalState.currentPhase)
   const isStory = format !== 'post'
   const isTiktok = format === 'tiktok'
+  const localDay = stationDateKey(tidalState.computedAt, tidalState.station.timezone)
+  const timezone = tidalState.station.timezone
 
   // Fetch 7-day extremes for forecast card
   useEffect(() => {
     let cancelled = false
+    setWeekExtremes([])
+    setCaptureError('')
+    setRendering(false)
     async function load() {
-      const now = new Date()
-      const start = new Date(now)
-      start.setHours(0, 0, 0, 0)
-      const end = new Date(start)
-      end.setDate(end.getDate() + 7)
-      end.setHours(23, 59, 59, 999)
+      const { start } = stationDayBounds(tidalState.computedAt, timezone)
+      const { end } = stationDayBounds(tidalState.computedAt, timezone, 6)
       try {
         const exts = await getExtremes(tidalState.station.id, start, end)
         if (!cancelled) setWeekExtremes(exts)
-      } catch { /* silently fail */ }
+      } catch { if (!cancelled) setCaptureError('The forecast card could not be calculated. Reload to try again.') }
     }
     load()
     return () => { cancelled = true }
-  }, [tidalState.station.id])
+    // The local date changes only at this station’s midnight.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tidalState.station.id, timezone, localDay])
 
   // Capture cards with html2canvas — render at display size, upscale via scale
   const captureCards = useCallback(async () => {
+    const generation = ++captureGeneration.current
     setRendering(true)
+    setCaptureError('')
     try {
       const { default: html2canvas } = await import('html2canvas-pro')
       await document.fonts.ready
@@ -80,6 +88,7 @@ export function PromoCards({ tidalState, format, onImagesReady }: PromoCardsProp
       const images: CardImage[] = []
 
       for (let i = 0; i < TOTAL_CARDS; i++) {
+        if (generation !== captureGeneration.current) return
         const el = cardRefs.current[i]
         if (!el) continue
         const canvas = await html2canvas(el, {
@@ -93,19 +102,24 @@ export function PromoCards({ tidalState, format, onImagesReady }: PromoCardsProp
           cardNum: i + 1,
         })
       }
-      onImagesReady(images)
+      if (generation === captureGeneration.current) onImagesReady(images)
     } catch (err) {
+      if (generation === captureGeneration.current) setCaptureError('Card export failed. Change the format or reload to retry.')
       console.error('Card capture failed:', err)
     } finally {
-      setRendering(false)
+      if (generation === captureGeneration.current) setRendering(false)
     }
   }, [outDim.width, dispDim.width, onImagesReady])
 
   // Re-capture when data or format changes
   useEffect(() => {
+    onImagesReady([])
+    if (!weekExtremes.length) return
     const timer = setTimeout(captureCards, 500)
-    return () => clearTimeout(timer)
-  }, [tidalState, format, weekExtremes, captureCards])
+    // Invalidate the current asynchronous capture when its inputs change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => { clearTimeout(timer); captureGeneration.current++ }
+  }, [tidalState, format, weekExtremes, captureCards, onImagesReady])
 
   const setRef = (i: number) => (el: HTMLDivElement | null) => {
     cardRefs.current[i] = el
@@ -120,41 +134,42 @@ export function PromoCards({ tidalState, format, onImagesReady }: PromoCardsProp
         <div ref={setRef(0)}>
           <CardShell {...shellProps} cardNum={1}>
             <PhaseCard tidalState={tidalState} color={phaseColor} isStory={isStory} />
-            <CardFooter cardNum={1} isStory={isStory} color={phaseColor} />
+            <CardFooter now={tidalState.computedAt} timezone={timezone} cardNum={1} isStory={isStory} color={phaseColor} />
           </CardShell>
         </div>
         <div ref={setRef(1)}>
           <CardShell {...shellProps} cardNum={2}>
             <ConditionsCard tidalState={tidalState} color={phaseColor} isStory={isStory} />
-            <CardFooter cardNum={2} isStory={isStory} color={phaseColor} />
+            <CardFooter now={tidalState.computedAt} timezone={timezone} cardNum={2} isStory={isStory} color={phaseColor} />
           </CardShell>
         </div>
         <div ref={setRef(2)}>
           <CardShell {...shellProps} cardNum={3}>
             <EnergyCard phase={tidalState.currentPhase} color={phaseColor} station={tidalState.station.name} isStory={isStory} />
-            <CardFooter cardNum={3} isStory={isStory} color={phaseColor} />
+            <CardFooter now={tidalState.computedAt} timezone={timezone} cardNum={3} isStory={isStory} color={phaseColor} />
           </CardShell>
         </div>
         <div ref={setRef(3)}>
           <CardShell {...shellProps} cardNum={4}>
             <AdviceCard phase={tidalState.currentPhase} color={phaseColor} isStory={isStory} />
-            <CardFooter cardNum={4} isStory={isStory} color={phaseColor} />
+            <CardFooter now={tidalState.computedAt} timezone={timezone} cardNum={4} isStory={isStory} color={phaseColor} />
           </CardShell>
         </div>
         <div ref={setRef(4)}>
           <CardShell {...shellProps} cardNum={5}>
             <CTACard tidalState={tidalState} color={phaseColor} isStory={isStory} />
-            <CardFooter cardNum={5} isStory={isStory} color={phaseColor} />
+            <CardFooter now={tidalState.computedAt} timezone={timezone} cardNum={5} isStory={isStory} color={phaseColor} />
           </CardShell>
         </div>
         <div ref={setRef(5)}>
           <CardShell {...shellProps} cardNum={6}>
-            <ForecastCard station={tidalState.station.name} color={phaseColor} weekExtremes={weekExtremes} isStory={isStory} />
-            <CardFooter cardNum={6} isStory={isStory} color={phaseColor} />
+            <ForecastCard station={tidalState.station.name} timezone={timezone} now={tidalState.computedAt} color={phaseColor} weekExtremes={weekExtremes} isStory={isStory} />
+            <CardFooter now={tidalState.computedAt} timezone={timezone} cardNum={6} isStory={isStory} color={phaseColor} />
           </CardShell>
         </div>
       </div>
 
+      {captureError && <p role="alert" style={{ color: '#e9b89d', textAlign: 'center' }}>{captureError}</p>}
       {rendering && (
         <div style={{ textAlign: 'center', padding: '12px 0', fontSize: '0.8125rem', color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-jetbrains), monospace' }}>
           Rendering cards...
@@ -177,10 +192,10 @@ function PhaseCard({ tidalState, color, isStory }: { tidalState: TidalState; col
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative', zIndex: 1 }}>
       {/* Title */}
       <div style={{ fontFamily: FONT_DISPLAY, fontSize: 10, fontWeight: 600, letterSpacing: '0.15em', textTransform: 'uppercase' as const, color: 'rgba(240,238,248,0.6)', textShadow: `0 0 8px ${color}40`, marginBottom: 2 }}>
-        TIDE RESONANCE
+        TIDARA
       </div>
       <div style={{ fontFamily: FONT_MONO, fontSize: 7, color: 'rgba(200,196,220,0.5)', letterSpacing: '0.05em', marginBottom: isStory ? 16 : 8 }}>
-        Live Tidal Phase
+        Predicted Tidal Phase
       </div>
 
       {/* Large phase symbol */}
@@ -229,7 +244,7 @@ function PhaseCard({ tidalState, color, isStory }: { tidalState: TidalState; col
           <StatsRow label="Range" value={`${computeRange(tidalState).toFixed(2)}m`} color={color} />
           <div style={{ height: 1, background: 'rgba(255,255,255,0.08)', margin: '6px 0' }} />
           {tidalState.nextHigh && (
-            <StatsRow label="Next High" value={formatTime12h(tidalState.nextHigh.time)} color={color} />
+            <StatsRow label="Next High" value={formatTime12h(tidalState.nextHigh.time, tidalState.station.timezone)} color={color} />
           )}
         </div>
       )}
@@ -253,7 +268,7 @@ function ConditionsCard({ tidalState, color, isStory }: { tidalState: TidalState
         CURRENT CONDITIONS
       </div>
       <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: 'rgba(200,196,220,0.5)', marginBottom: isStory ? 20 : 12 }}>
-        Live Tidal Data
+        Predicted Tidal Data
       </div>
 
       {/* Water height section */}
@@ -446,7 +461,7 @@ function CTACard({ tidalState, color, isStory }: { tidalState: TidalState; color
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative', zIndex: 1 }}>
       <div style={{ fontFamily: FONT_DISPLAY, fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' as const, color: 'rgba(240,238,248,0.6)', textShadow: `0 0 8px ${color}40`, marginBottom: 2 }}>
-        TIDE RESONANCE
+        TIDARA
       </div>
       <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: 'rgba(200,196,220,0.5)', marginBottom: isStory ? 20 : 12 }}>
         Align with the Ocean&apos;s Rhythm
@@ -493,7 +508,7 @@ function CTACard({ tidalState, color, isStory }: { tidalState: TidalState; color
           tidara.app
         </div>
         <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: 'rgba(200,196,220,0.5)' }}>
-          Free · No account · Works offline
+          Free · No account · Your coastal rhythm
         </div>
       </div>
     </div>
@@ -504,21 +519,12 @@ function CTACard({ tidalState, color, isStory }: { tidalState: TidalState; color
    CARD 6: 7-Day Tidal Calendar
    ═══════════════════════════════════════════════════════════════ */
 
-function ForecastCard({ station, color, weekExtremes, isStory }: { station: string; color: string; weekExtremes: TideExtreme[]; isStory: boolean }) {
-  const days = useMemo(() => {
-    const now = new Date()
-    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-    const result: { label: string; isToday: boolean; extremes: TideExtreme[] }[] = []
-    for (let d = 0; d < 7; d++) {
-      const date = new Date(now)
-      date.setHours(0, 0, 0, 0)
-      date.setDate(date.getDate() + d)
-      const key = date.toDateString()
-      const label = d === 0 ? 'Today' : dayNames[date.getDay()]
-      result.push({ label, isToday: d === 0, extremes: weekExtremes.filter((e) => e.time.toDateString() === key) })
-    }
-    return result
-  }, [weekExtremes])
+function ForecastCard({ station, timezone, now, color, weekExtremes, isStory }: { station: string; timezone: string; now: Date; color: string; weekExtremes: TideExtreme[]; isStory: boolean }) {
+  const days = useMemo(() => Array.from({ length: 7 }, (_, offset) => {
+    const day = stationDayBounds(now, timezone, offset)
+    return { ...day, label: offset === 0 ? 'Today' : day.start.toLocaleDateString('en-GB', { weekday: 'short', timeZone: timezone }),
+      isToday: offset === 0, extremes: weekExtremes.filter(extreme => +extreme.time >= +day.start && +extreme.time < +day.end) }
+  }), [weekExtremes, timezone, now])
 
   const trackHeight = isStory ? 260 : 160
 
@@ -578,10 +584,9 @@ function ForecastCard({ station, color, weekExtremes, isStory }: { station: stri
 
               {/* Extreme markers positioned by time of day */}
               {day.extremes.map((ext, j) => {
-                const hrs = ext.time.getHours() + ext.time.getMinutes() / 60
-                const yPct = (hrs / 24) * 100
+                const yPct = (+ext.time - +day.start) / (+day.end - +day.start) * 100
                 const isHigh = ext.type === 'high'
-                const timeStr = ext.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
+                const timeStr = formatTideTime(ext.time, timezone)
 
                 return (
                   <div key={j} style={{ position: 'absolute', left: '50%', top: `${yPct}%`, transform: 'translate(-50%, -50%)', textAlign: 'center' as const }}>
@@ -616,7 +621,7 @@ function ForecastCard({ station, color, weekExtremes, isStory }: { station: stri
    Helpers
    ═══════════════════════════════════════════════════════════════ */
 
-function StatsRow({ label, value, color }: { label: string; value: string; color: string }) {
+function StatsRow({ label, value }: { label: string; value: string; color: string }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
       <span style={{ fontFamily: FONT_MONO, fontSize: 8, color: 'rgba(200,196,220,0.5)' }}>{label}</span>

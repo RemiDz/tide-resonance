@@ -31,12 +31,9 @@ export function mapToSVG(
   const plotW = viewBox.width - padding.left - padding.right
   const plotH = viewBox.height - padding.top - padding.bottom
 
-  // Time range: start of day → end of day
-  const dayStart = new Date(points[0].time)
-  dayStart.setHours(0, 0, 0, 0)
-  const dayEnd = new Date(dayStart)
-  dayEnd.setHours(23, 59, 59, 999)
-  const timeRange = dayEnd.getTime() - dayStart.getTime()
+  // Preserve the supplied station-local day, including 23/25-hour days.
+  const startTime = +points[0].time
+  const timeRange = +points[points.length - 1].time - startTime || 1
 
   // Height range with some buffer
   const heights = points.map((p) => p.height)
@@ -46,8 +43,9 @@ export function mapToSVG(
   const buffer = heightRange * 0.1
 
   return points.map((p) => {
-    const tFrac = (p.time.getTime() - dayStart.getTime()) / timeRange
-    const hFrac = (p.height - (minH - buffer)) / (heightRange + buffer * 2)
+    const tFrac = (p.time.getTime() - startTime) / timeRange
+    const lower = minH - (maxH === minH ? 0.5 : 0) - buffer
+    const hFrac = (p.height - lower) / (heightRange + buffer * 2)
     return {
       x: padding.left + tFrac * plotW,
       y: padding.top + (1 - hFrac) * plotH, // invert Y for SVG
@@ -102,7 +100,7 @@ export function getNowPosition(
     const t0 = points[i].time.getTime()
     const t1 = points[i + 1].time.getTime()
 
-    if (nowMs >= t0 && nowMs <= t1) {
+    if (t1 > t0 && nowMs >= t0 && nowMs <= t1) {
       const frac = (nowMs - t0) / (t1 - t0)
       return {
         x: svgPoints[i].x + frac * (svgPoints[i + 1].x - svgPoints[i].x),
@@ -111,9 +109,7 @@ export function getNowPosition(
     }
   }
 
-  // If now is before first point or after last, clamp
-  if (nowMs < points[0].time.getTime()) return svgPoints[0]
-  return svgPoints[svgPoints.length - 1]
+  return null
 }
 
 /**

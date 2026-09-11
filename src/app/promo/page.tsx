@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
-import { useGeolocation } from '@/hooks/useGeolocation'
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
+import type { GeoLocation } from '@/types/tidal'
+import { DEFAULT_LOCATION, readStored, sanitizeLocation } from '@/lib/settings'
 import { useTidalState } from '@/hooks/useTidalState'
 import { getPhaseColour, getPhaseLabel, getPhaseArrow } from '@/lib/colour-utils'
 import { phaseGuidance } from '@/data/phaseGuidance'
@@ -21,12 +22,6 @@ const FORMAT_OPTIONS: { value: Format; label: string }[] = [
   { value: 'tiktok', label: 'TikTok 9:16' },
 ]
 
-const DISPLAY_SIZES: Record<Format, { width: number; height: number }> = {
-  post: { width: 320, height: 320 },
-  story: { width: 270, height: 480 },
-  tiktok: { width: 270, height: 480 },
-}
-
 const PLATFORMS: { key: Platform; label: string }[] = [
   { key: 'instagram', label: 'Instagram' },
   { key: 'twitter', label: 'Twitter / X' },
@@ -35,8 +30,17 @@ const PLATFORMS: { key: Platform; label: string }[] = [
 ]
 
 export default function PromoPage() {
-  const location = useGeolocation(true)
-  const { tidalState, isLoading } = useTidalState(location)
+  const [location, setLocation] = useState<GeoLocation>(DEFAULT_LOCATION)
+  const { tidalState, error, refresh } = useTidalState(location)
+  const [copyError, setCopyError] = useState('')
+  const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => {
+    const saved = sanitizeLocation(readStored('tidara-location'))
+    // Browser storage is hydrated after the server-compatible first render.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (saved) setLocation(saved)
+    return () => { if (copyTimer.current) clearTimeout(copyTimer.current) }
+  }, [])
 
   const [format, setFormat] = useState<Format>('post')
   const [cardImages, setCardImages] = useState<CardImage[]>([])
@@ -76,12 +80,14 @@ export default function PromoPage() {
   const handleCopy = useCallback(async (platform: Platform) => {
     if (!captionVars) return
     const text = buildCaption(platform, captionVars)
+    setCopyError('')
     try {
       await navigator.clipboard.writeText(text)
       setCopiedPlatform(platform)
-      setTimeout(() => setCopiedPlatform(null), 2000)
+      if (copyTimer.current) clearTimeout(copyTimer.current)
+      copyTimer.current = setTimeout(() => setCopiedPlatform(null), 2000)
     } catch {
-      // Fallback — silently fail
+      setCopyError('Clipboard access is unavailable. Select and copy the caption text instead.')
     }
   }, [captionVars])
 
@@ -97,32 +103,30 @@ export default function PromoPage() {
 
   // Format date
   const dateDisplay = new Intl.DateTimeFormat('en-GB', {
+    timeZone: tidalState?.station.timezone,
     weekday: 'long',
     day: 'numeric',
     month: 'long',
     year: 'numeric',
-  }).format(new Date())
+  }).format(tidalState?.computedAt ?? new Date())
 
-  const displaySize = DISPLAY_SIZES[format]
 
   // --- Render ---
 
-  if (isLoading && !tidalState) {
+  if (!tidalState) {
     return (
       <div>
         <OceanBackground />
         <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-jetbrains), monospace', fontSize: '0.875rem' }}>
-            Loading Content Studio...
+            {error || 'Loading Content Studio…'}
+            {error && <button onClick={refresh} style={{ display: 'block', margin: '16px auto', minHeight: 44, padding: '8px 16px' }}>Try again</button>}
           </div>
         </div>
       </div>
     )
   }
 
-  if (!tidalState) return null
-
-  const guidance = phaseGuidance[tidalState.currentPhase]
   const heights = tidalState.extremes24h.map((e) => e.height)
   const minH = heights.length > 0 ? Math.min(...heights) : 0
   const maxH = heights.length > 0 ? Math.max(...heights) : 5
@@ -161,7 +165,7 @@ export default function PromoPage() {
               letterSpacing: '0.02em',
             }}
           >
-            Tide Resonance — Content Studio
+            Tidara — Content Studio
           </h1>
           <p
             style={{
@@ -222,7 +226,7 @@ export default function PromoPage() {
             {nextTide && (
               <StatChip
                 label={`Next ${nextTide.type === 'high' ? 'High' : 'Low'}`}
-                value={formatTime12h(nextTide.time)}
+                value={formatTime12h(nextTide.time, tidalState.station.timezone)}
                 color={phaseColour}
               />
             )}
@@ -248,7 +252,8 @@ export default function PromoPage() {
             timeline={tidalState.timeline24h}
             extremes={tidalState.extremes24h}
             phase={tidalState.currentPhase}
-            now={new Date()}
+            now={tidalState.computedAt}
+            timezone={tidalState.station.timezone}
           />
         </div>
 
@@ -278,6 +283,7 @@ export default function PromoPage() {
         </div>
 
         {/* ── Shareable Cards ──────────────────────────────── */}
+        {copyError && <p role="alert" style={{ color: '#e9b89d', textAlign: 'center' }}>{copyError}</p>}
         <PromoCards
           tidalState={tidalState}
           format={format}
@@ -298,6 +304,8 @@ export default function PromoPage() {
             >
               {cardImages.map((img) => (
                 <div key={img.cardNum} style={{ position: 'relative' }}>
+                  {/* Local canvas exports are already rasterised at their final size. */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={img.dataUrl}
                     alt={`Card ${img.cardNum}: ${img.slug}`}

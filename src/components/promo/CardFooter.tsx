@@ -3,13 +3,16 @@
 import { FONT_DISPLAY, FONT_MONO } from './CardShell'
 
 interface CardFooterProps {
+  now: Date
+  timezone: string
   cardNum: number
   isStory: boolean
   color: string
 }
 
-export function CardFooter({ cardNum, isStory, color }: CardFooterProps) {
-  const dateStr = new Date().toLocaleDateString('en-GB', {
+export function CardFooter({ now, timezone, cardNum, isStory, color }: CardFooterProps) {
+  const dateStr = now.toLocaleDateString('en-GB', {
+    timeZone: timezone,
     day: 'numeric',
     month: 'short',
     year: 'numeric',

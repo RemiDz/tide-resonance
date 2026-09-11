@@ -12,7 +12,7 @@ interface TideTimesCardProps {
 export function TideTimesCard({ tidalState }: TideTimesCardProps) {
   const { extremes24h, currentPhase } = tidalState
   const colour = getPhaseColour(currentPhase)
-  const now = Date.now()
+  const now = +tidalState.computedAt
 
   return (
     <InfoCard

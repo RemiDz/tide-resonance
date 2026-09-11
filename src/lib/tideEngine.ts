@@ -1,312 +1,114 @@
-import type {
-  TideStation,
-  TideExtreme,
-  TidePoint,
-  TidalPhase,
-  TidalState,
-} from '@/types/tidal'
+import type { Station } from '@neaps/tide-database'
+import type { TidePrediction } from '@neaps/tide-predictor'
+import type { TideStation, TideExtreme, TidePoint, TidalPhase, TidalState } from '@/types/tidal'
+import { stationDayBounds } from './tide-time'
 
-// ---------------------------------------------------------------------------
-// Lazy-loaded database reference (avoids blocking initial page load)
-// ---------------------------------------------------------------------------
+import { stationClient, type NearbyStation } from './station-client'
+import { stationDatum, stationMetadata } from './station-metadata'
 
-let _dbModule: typeof import('@neaps/tide-database') | null = null
-
-async function getDatabase() {
-  if (!_dbModule) {
-    _dbModule = await import('@neaps/tide-database')
-  }
-  return _dbModule
+type Model = { raw: Station; predictor: TidePrediction; datum: string; offsets?: Station['offsets'] }
+const models = new Map<string, Promise<Model>>()
+function validatePosition(lat: number, lon: number) {
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) throw new Error('Invalid location coordinates.')
 }
-
-// ---------------------------------------------------------------------------
-// Station helpers — map @neaps Station to our TideStation shape
-// ---------------------------------------------------------------------------
-
-function toTideStation(s: { id: string; name: string; latitude: number; longitude: number; country: string; continent: string; timezone: string; type: 'reference' | 'subordinate' }): TideStation {
-  return {
-    id: s.id,
-    name: s.name,
-    latitude: s.latitude,
-    longitude: s.longitude,
-    country: s.country,
-    continent: s.continent,
-    timezone: s.timezone,
-    type: s.type,
-  }
+function validateWindow(start: Date, end: Date) {
+  if (!Number.isFinite(+start) || !Number.isFinite(+end) || +end <= +start || +end - +start > 40 * 86400000) throw new Error('Invalid forecast dates.')
 }
-
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
-
-/**
- * Find the nearest station to a given coordinate.
- * Returns the station and the distance in km, or null if none found.
- */
-export async function findNearestStation(
-  lat: number,
-  lon: number
-): Promise<{ station: TideStation; distanceKm: number } | null> {
-  const db = await getDatabase()
-  const result = db.nearest({ latitude: lat, longitude: lon })
-  if (!result) return null
-  const [raw, dist] = result
-  return { station: toTideStation(raw), distanceKm: dist }
+export async function getStation(id: string): Promise<TideStation> {
+  return stationMetadata((await stationClient.getModel(id)).station)
 }
-
-/**
- * Search stations by name (fuzzy text search).
- */
-export async function searchStations(
-  query: string,
-  maxResults = 20
-): Promise<TideStation[]> {
-  const db = await getDatabase()
-  const results = db.search(query, { maxResults })
-  return results.map(toTideStation)
+export async function findNearestStation(lat: number, lon: number): Promise<NearbyStation | null> {
+  validatePosition(lat, lon)
+  return (await stationClient.near(lat, lon, 50, 1))[0] ?? null
 }
-
-/**
- * Find multiple stations near a coordinate.
- */
-export async function getStationsNear(
-  lat: number,
-  lon: number,
-  maxDistance = 50,
-  maxResults = 10
-): Promise<{ station: TideStation; distanceKm: number }[]> {
-  const db = await getDatabase()
-  const results = db.near({
-    latitude: lat,
-    longitude: lon,
-    maxDistance,
-    maxResults,
-  })
-  return results.map(([raw, dist]) => ({
-    station: toTideStation(raw),
-    distanceKm: dist,
-  }))
+export async function searchStations(query: string, maxResults = 20): Promise<TideStation[]> {
+  if (query.trim().length < 2) return []
+  return stationClient.search(query.trim().slice(0, 120), Math.min(50, Math.max(1, maxResults)))
 }
-
-// ---------------------------------------------------------------------------
-// Prediction helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Build a tide predictor for a given station id.
- * Handles both reference and subordinate stations.
- */
-async function buildPredictor(stationId: string) {
-  const { createTidePredictor } = await import('@neaps/tide-predictor')
-  const db = await getDatabase()
-
-  const raw = db.stations.find((s) => s.id === stationId)
-  if (!raw) throw new Error(`Station "${stationId}" not found in database`)
-
-  if (raw.type === 'reference') {
-    const predictor = createTidePredictor(raw.harmonic_constituents)
-    return { predictor, offsets: undefined }
-  }
-
-  // Subordinate — resolve the reference station
-  if (!raw.offsets) {
-    throw new Error(`Subordinate station "${stationId}" has no offsets`)
-  }
-
-  const ref = db.stations.find((s) => s.id === raw.offsets!.reference)
-  if (!ref) {
-    throw new Error(
-      `Reference station "${raw.offsets.reference}" not found for subordinate "${stationId}"`
-    )
-  }
-
-  const predictor = createTidePredictor(ref.harmonic_constituents)
-  return {
-    predictor,
-    offsets: {
-      height: raw.offsets.height,
-      time: raw.offsets.time,
-    },
-  }
+export async function getStationsNear(lat: number, lon: number, maxDistance = 50, maxResults = 10) {
+  validatePosition(lat, lon)
+  return stationClient.near(lat, lon, maxDistance, maxResults)
 }
-
-/**
- * Get high/low tide extremes between two dates.
- */
-export async function getExtremes(
-  stationId: string,
-  start: Date,
-  end: Date
-): Promise<TideExtreme[]> {
-  const { predictor, offsets } = await buildPredictor(stationId)
-
-  const raw = predictor.getExtremesPrediction({
-    start,
-    end,
-    labels: { high: 'High', low: 'Low' },
-    ...(offsets ? { offsets } : {}),
-  })
-
-  return raw.map((e) => ({
-    time: e.time,
-    height: e.level,
-    type: e.high ? ('high' as const) : ('low' as const),
-  }))
+async function buildModel(stationId: string): Promise<Model> {
+  const cached = models.get(stationId)
+  if (cached) return cached
+  const promise = (async () => {
+    const model = await stationClient.getModel(stationId)
+    const raw = model.station
+    const reference = raw.type === 'subordinate' ? model.reference : raw
+    if (!reference || reference.type !== 'reference') throw new Error('This station has no usable reference. Please choose another coast.')
+    const datum = stationDatum(reference)
+    const mean = reference.datums?.MSL ?? 0
+    const origin = reference.datums?.[datum] ?? mean
+    const { createTidePredictor } = await import('@neaps/tide-predictor')
+    const predictor = createTidePredictor(reference.harmonic_constituents, { offset: mean - origin })
+    return { raw, predictor, datum, offsets: raw.type === 'subordinate' ? raw.offsets : undefined }
+  })()
+  if (models.size >= 24) models.delete(models.keys().next().value!)
+  models.set(stationId, promise)
+  promise.catch(() => { if (models.get(stationId) === promise) models.delete(stationId) })
+  return promise
 }
-
-/**
- * Get a continuous water-level timeline between two dates.
- * @param fidelity  Seconds between points (default 600 = 10 minutes)
- */
-export async function getTimeline(
-  stationId: string,
-  start: Date,
-  end: Date,
-  fidelity = 600
-): Promise<TidePoint[]> {
-  const { predictor } = await buildPredictor(stationId)
-
-  const raw = predictor.getTimelinePrediction({
-    start,
-    end,
-    timeFidelity: fidelity,
-  })
-
-  return raw.map((p) => ({ time: p.time, height: p.level }))
+function extremesFor(model: Model, start: Date, end: Date): TideExtreme[] {
+  const offsets = model.offsets
+  const padding = offsets ? Math.max(Math.abs(offsets.time.high), Math.abs(offsets.time.low)) * 60000 + 3600000 : 0
+  const raw = model.predictor.getExtremesPrediction({ start: new Date(+start - padding), end: new Date(+end + padding) })
+  return raw.map(point => {
+    const type = point.high ? 'high' as const : 'low' as const
+    const height = offsets ? offsets.height.type === 'ratio' ? point.level * offsets.height[type] : point.level + offsets.height[type] : point.level
+    return { type, time: new Date(+point.time + (offsets?.time[type] ?? 0) * 60000), height }
+  }).filter(point => +point.time >= +start && +point.time < +end).sort((a, b) => +a.time - +b.time)
 }
-
-/**
- * Get the water height at a single moment in time.
- */
-export async function getCurrentHeight(
-  stationId: string,
-  time: Date
-): Promise<number> {
-  const { predictor } = await buildPredictor(stationId)
-  const point = predictor.getWaterLevelAtTime({ time })
-  return point.level
+export async function getExtremes(stationId: string, start: Date, end: Date): Promise<TideExtreme[]> {
+  validateWindow(start, end)
+  return extremesFor(await buildModel(stationId), start, end)
 }
-
-// ---------------------------------------------------------------------------
-// Full tidal-state computation
-// ---------------------------------------------------------------------------
-
-/**
- * Compute a complete TidalState snapshot for a station.
- * This is the primary function consumed by the useTidalState hook.
- */
-export async function computeTidalState(
-  station: TideStation,
-  distanceKm: number
-): Promise<TidalState> {
-  const now = new Date()
-
-  // 48-hour window for extremes: yesterday 00:00 → tomorrow 23:59
-  const extremesStart = new Date(now)
-  extremesStart.setDate(extremesStart.getDate() - 1)
-  extremesStart.setHours(0, 0, 0, 0)
-
-  const extremesEnd = new Date(now)
-  extremesEnd.setDate(extremesEnd.getDate() + 1)
-  extremesEnd.setHours(23, 59, 59, 999)
-
-  // 24-hour window for timeline: today 00:00 → today 23:59
-  const timelineStart = new Date(now)
-  timelineStart.setHours(0, 0, 0, 0)
-
-  const timelineEnd = new Date(now)
-  timelineEnd.setHours(23, 59, 59, 999)
-
-  // Fetch extremes + timeline + current height in parallel
-  const [extremes48h, timeline24h, currentHeight] = await Promise.all([
-    getExtremes(station.id, extremesStart, extremesEnd),
-    getTimeline(station.id, timelineStart, timelineEnd),
-    getCurrentHeight(station.id, now),
+/** Secondary stations publish high/low offsets, not a continuous harmonic model. */
+export function interpolateSecondaryHeight(extremes: TideExtreme[], time: Date): number {
+  const nextIndex = extremes.findIndex(extreme => +extreme.time >= +time)
+  if (nextIndex === 0 && +extremes[0].time === +time) return extremes[0].height
+  if (nextIndex < 1) throw new Error('No surrounding tide turns are available for this forecast.')
+  const previous = extremes[nextIndex - 1], next = extremes[nextIndex]
+  const fraction = (+time - +previous.time) / (+next.time - +previous.time)
+  return previous.height + (next.height - previous.height) * (1 - Math.cos(Math.PI * fraction)) / 2
+}
+function heightFor(model: Model, time: Date, extremes?: TideExtreme[]) {
+  if (!model.offsets) return model.predictor.getWaterLevelAtTime({ time }).level
+  return interpolateSecondaryHeight(extremes ?? extremesFor(model, new Date(+time - 2 * 86400000), new Date(+time + 2 * 86400000)), time)
+}
+export async function getCurrentHeight(stationId: string, time: Date): Promise<number> {
+  if (!Number.isFinite(+time)) throw new Error('Invalid forecast time.')
+  return heightFor(await buildModel(stationId), time)
+}
+export async function getTimeline(stationId: string, start: Date, end: Date, fidelity = 600): Promise<TidePoint[]> {
+  validateWindow(start, end)
+  if (!Number.isFinite(fidelity) || fidelity < 60 || fidelity > 86400) throw new Error('Invalid forecast interval.')
+  const model = await buildModel(stationId)
+  const extremes = model.offsets ? extremesFor(model, new Date(+start - 2 * 86400000), new Date(+end + 2 * 86400000)) : undefined
+  const points: TidePoint[] = []
+  for (let time = +start; time < +end; time += fidelity * 1000) points.push({ time: new Date(time), height: heightFor(model, new Date(time), extremes) })
+  points.push({ time: end, height: heightFor(model, end, extremes) })
+  return points
+}
+export async function computeTidalState(station: TideStation, distanceKm: number, now = new Date()): Promise<TidalState> {
+  const { start, end } = stationDayBounds(now, station.timezone)
+  const [extremes, timeline24h, currentHeight, beforeHeight, afterHeight] = await Promise.all([
+    getExtremes(station.id, new Date(+start - 2 * 86400000), new Date(+end + 2 * 86400000)),
+    getTimeline(station.id, start, end), getCurrentHeight(station.id, now),
+    getCurrentHeight(station.id, new Date(+now - 300000)), getCurrentHeight(station.id, new Date(+now + 300000)),
   ])
-
-  // Filter extremes to today only for the 24h list
-  const todayStart = timelineStart.getTime()
-  const todayEnd = timelineEnd.getTime()
-  const extremes24h = extremes48h.filter(
-    (e) => e.time.getTime() >= todayStart && e.time.getTime() <= todayEnd
-  )
-
-  // Find previous and next extremes relative to now
-  const nowMs = now.getTime()
-
-  const pastExtremes = extremes48h
-    .filter((e) => e.time.getTime() <= nowMs)
-    .sort((a, b) => b.time.getTime() - a.time.getTime())
-
-  const futureExtremes = extremes48h
-    .filter((e) => e.time.getTime() > nowMs)
-    .sort((a, b) => a.time.getTime() - b.time.getTime())
-
-  const previousHigh = pastExtremes.find((e) => e.type === 'high') ?? null
-  const previousLow = pastExtremes.find((e) => e.type === 'low') ?? null
-  const nextHigh = futureExtremes.find((e) => e.type === 'high') ?? null
-  const nextLow = futureExtremes.find((e) => e.type === 'low') ?? null
-
-  // Determine current phase
-  const lastExtreme = pastExtremes[0] ?? null
-  const nextExtreme = futureExtremes[0] ?? null
-
-  let currentPhase: TidalPhase = 'RISING'
-  let phaseProgress = 0
-
-  if (lastExtreme && nextExtreme) {
-    const phaseDuration = nextExtreme.time.getTime() - lastExtreme.time.getTime()
-    const elapsed = nowMs - lastExtreme.time.getTime()
-    phaseProgress = phaseDuration > 0 ? Math.min(elapsed / phaseDuration, 1) : 0
-
-    // Slack windows: within 5% of phase boundaries
-    const SLACK_THRESHOLD = 0.05
-
-    if (lastExtreme.type === 'low' && nextExtreme.type === 'high') {
-      // Between a low and a high → rising
-      if (phaseProgress < SLACK_THRESHOLD) {
-        currentPhase = 'LOW_SLACK'
-      } else if (phaseProgress > 1 - SLACK_THRESHOLD) {
-        currentPhase = 'HIGH_SLACK'
-      } else {
-        currentPhase = 'RISING'
-      }
-    } else {
-      // Between a high and a low → falling
-      if (phaseProgress < SLACK_THRESHOLD) {
-        currentPhase = 'HIGH_SLACK'
-      } else if (phaseProgress > 1 - SLACK_THRESHOLD) {
-        currentPhase = 'LOW_SLACK'
-      } else {
-        currentPhase = 'FALLING'
-      }
-    }
-  }
-
-  // Rate of change — difference over past 10 minutes
-  const tenMinAgo = new Date(nowMs - 10 * 60 * 1000)
-  let rateOfChange = 0
-  try {
-    const heightTenMinAgo = await getCurrentHeight(station.id, tenMinAgo)
-    const deltaH = currentHeight - heightTenMinAgo
-    rateOfChange = deltaH * 6 // 10 min → per hour
-  } catch {
-    // If rate calc fails, leave as 0
-  }
-
-  return {
-    station,
-    distanceKm,
-    currentHeight,
-    currentPhase,
-    phaseProgress,
-    rateOfChange,
-    nextHigh,
-    nextLow,
-    previousHigh,
-    previousLow,
-    extremes24h,
-    timeline24h,
-  }
+  const past = extremes.filter(extreme => +extreme.time <= +now).reverse()
+  const future = extremes.filter(extreme => +extreme.time > +now)
+  const last = past[0], next = future[0]
+  if (!last || !next) throw new Error('No tide turns were found for this coast. Please choose another station.')
+  const phaseProgress = Math.max(0, Math.min(1, (+now - +last.time) / (+next.time - +last.time)))
+  const rateOfChange = (afterHeight - beforeHeight) * 6
+  let currentPhase: TidalPhase = rateOfChange >= 0 ? 'RISING' : 'FALLING'
+  if (+now - +last.time <= 15 * 60000) currentPhase = last.type === 'high' ? 'HIGH_SLACK' : 'LOW_SLACK'
+  else if (+next.time - +now <= 15 * 60000) currentPhase = next.type === 'high' ? 'HIGH_SLACK' : 'LOW_SLACK'
+  return { station, distanceKm, currentHeight, currentPhase, phaseProgress, rateOfChange,
+    previousHigh: past.find(point => point.type === 'high') ?? null, previousLow: past.find(point => point.type === 'low') ?? null,
+    nextHigh: future.find(point => point.type === 'high') ?? null, nextLow: future.find(point => point.type === 'low') ?? null,
+    extremes24h: extremes.filter(point => +point.time >= +start && +point.time < +end), timeline24h,
+    computedAt: now, dayStart: start, dayEnd: end }
 }

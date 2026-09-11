@@ -8,6 +8,9 @@ export interface TideStation {
   continent: string
   timezone: string
   type: 'reference' | 'subordinate'
+  datum: string
+  source: string
+  sourceUrl: string
 }
 
 // Prediction results
@@ -38,6 +41,9 @@ export interface TidalState {
   previousLow: TideExtreme | null
   extremes24h: TideExtreme[]
   timeline24h: TidePoint[]
+  computedAt: Date
+  dayStart: Date
+  dayEnd: Date
 }
 
 // Geolocation
@@ -46,4 +52,5 @@ export interface GeoLocation {
   longitude: number
   source: 'device' | 'fallback' | 'manual'
   label?: string
+  stationId?: string
 }

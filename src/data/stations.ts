@@ -12,7 +12,7 @@ export const curatedStations: CuratedStation[] = [
   { name: 'North Shields', latitude: 55.007, longitude: -1.440, country: 'United Kingdom', region: 'UK & Ireland' },
   { name: 'Brighton', latitude: 50.815, longitude: -0.137, country: 'United Kingdom', region: 'UK & Ireland' },
   { name: 'Bristol', latitude: 51.511, longitude: -2.712, country: 'United Kingdom', region: 'UK & Ireland' },
-  { name: 'London Bridge', latitude: 51.507, longitude: -0.087, country: 'United Kingdom', region: 'UK & Ireland' },
+  { name: 'Thames Estuary', latitude: 51.441, longitude: 0.747, country: 'United Kingdom', region: 'UK & Ireland' },
   { name: 'Liverpool', latitude: 53.450, longitude: -3.018, country: 'United Kingdom', region: 'UK & Ireland' },
   { name: 'Dublin', latitude: 53.347, longitude: -6.220, country: 'Ireland', region: 'UK & Ireland' },
 

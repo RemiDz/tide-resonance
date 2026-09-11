@@ -1,84 +1,51 @@
 'use client'
-
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Settings } from '@/types/settings'
 import type { TidalState } from '@/types/tidal'
-
-type PermissionState = 'granted' | 'denied' | 'default' | 'unsupported'
+export type NotificationPermissionState = NotificationPermission | 'unsupported'
 
 export function useTideNotifications(settings: Settings, tidalState: TidalState | null) {
-  const [permissionState, setPermissionState] = useState<PermissionState>('default')
-  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([])
-
-  // Check initial permission state
+  const [permissionState, setPermissionState] = useState<NotificationPermissionState>('default')
+  const [error, setError] = useState('')
+  const fired = useRef(new Set<string>())
   useEffect(() => {
-    if (typeof window === 'undefined' || typeof Notification === 'undefined') {
-      setPermissionState('unsupported')
-      return
-    }
-    setPermissionState(Notification.permission as PermissionState)
+    // Read browser permission only after hydration; this never requests it.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPermissionState(typeof Notification === 'undefined' ? 'unsupported' : Notification.permission)
   }, [])
-
-  // Request permission when alerts enabled
+  const requestPermission = useCallback(async () => {
+    setError('')
+    if (typeof Notification === 'undefined') { setPermissionState('unsupported'); return false }
+    try {
+      const result = await Notification.requestPermission()
+      setPermissionState(result)
+      return result === 'granted'
+    } catch { setPermissionState('unsupported'); setError('Tide reminders are not supported in this browser.'); return false }
+  }, [])
+  const stationId = tidalState?.station.id, stationName = tidalState?.station.name
+  const nextHigh = tidalState?.nextHigh?.time.getTime(), nextLow = tidalState?.nextLow?.time.getTime()
   useEffect(() => {
-    if (!settings.alertsEnabled) return
-    if (typeof Notification === 'undefined') return
-    if (Notification.permission === 'granted') {
-      setPermissionState('granted')
-      return
+    if (!settings.alertsEnabled || permissionState !== 'granted' || !stationId) return
+    const timers: ReturnType<typeof setTimeout>[] = []
+    for (const [time, type, enabled] of [[nextHigh, 'High', settings.alertHigh], [nextLow, 'Low', settings.alertLow]] as const) {
+      if (time === undefined || !enabled) continue
+      const key = stationId + ':' + time + ':' + settings.alertTiming
+      const delay = time - settings.alertTiming * 60000 - Date.now()
+      if (delay < -60000 || fired.current.has(key)) continue
+      timers.push(setTimeout(() => {
+        // A suspended mobile page may wake after the turn has passed.
+        if (Date.now() >= time || fired.current.has(key)) return
+        fired.current.add(key)
+        if (fired.current.size > 100) fired.current.delete(fired.current.values().next().value!)
+        try {
+          new Notification('Tidara · ' + type.toLowerCase() + ' water', {
+            body: type + ' water in about ' + Math.max(1, Math.round((time - Date.now()) / 60000)) + ' minutes at ' + stationName,
+            tag: key,
+          })
+        } catch { setError('This browser cannot deliver tide reminders.'); setPermissionState('unsupported') }
+      }, Math.max(0, delay)))
     }
-    if (Notification.permission === 'denied') {
-      setPermissionState('denied')
-      return
-    }
-
-    Notification.requestPermission().then((result) => {
-      setPermissionState(result as PermissionState)
-    })
-  }, [settings.alertsEnabled])
-
-  // Schedule notifications
-  useEffect(() => {
-    // Clear existing timers
-    timersRef.current.forEach(clearTimeout)
-    timersRef.current = []
-
-    if (!settings.alertsEnabled || !tidalState) return
-    if (permissionState !== 'granted') return
-
-    const now = Date.now()
-    const offsetMs = settings.alertTiming * 60 * 1000
-
-    const schedule = (extreme: { time: Date; type: 'high' | 'low' } | null, label: string) => {
-      if (!extreme) return
-      const fireAt = extreme.time.getTime() - offsetMs
-      const delay = fireAt - now
-      if (delay <= 0) return
-
-      const timer = setTimeout(() => {
-        new Notification('Tide Resonance', {
-          body: `${label} in ${settings.alertTiming} minutes at ${tidalState.station.name}`,
-        })
-      }, delay)
-
-      timersRef.current.push(timer)
-    }
-
-    if (settings.alertHigh) schedule(tidalState.nextHigh, 'High Water')
-    if (settings.alertLow) schedule(tidalState.nextLow, 'Low Water')
-
-    return () => {
-      timersRef.current.forEach(clearTimeout)
-      timersRef.current = []
-    }
-  }, [
-    settings.alertsEnabled,
-    settings.alertTiming,
-    settings.alertHigh,
-    settings.alertLow,
-    tidalState,
-    permissionState,
-  ])
-
-  return { permissionState }
+    return () => timers.forEach(clearTimeout)
+  }, [settings.alertsEnabled, settings.alertTiming, settings.alertHigh, settings.alertLow, permissionState, stationId, stationName, nextHigh, nextLow])
+  return { permissionState, requestPermission, error }
 }

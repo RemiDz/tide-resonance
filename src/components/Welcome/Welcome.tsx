@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { storeValue } from '@/lib/settings'
 import type { GeoLocation, TidalState } from '@/types/tidal'
 
 interface WelcomeProps {
@@ -45,7 +46,7 @@ export function Welcome({ onComplete }: WelcomeProps) {
       }
 
       const state = await computeTidalState(result.station, result.distanceKm)
-      localStorage.setItem('hasSeenWelcome', 'true')
+      storeValue('hasSeenWelcome', true)
       onComplete(loc, state)
     } catch {
       setError('Location unavailable. Try Whitby instead.')
@@ -70,14 +71,14 @@ export function Welcome({ onComplete }: WelcomeProps) {
       const result = await findNearestStation(loc.latitude, loc.longitude)
       if (result) {
         const state = await computeTidalState(result.station, result.distanceKm)
-        localStorage.setItem('hasSeenWelcome', 'true')
+        storeValue('hasSeenWelcome', true)
         onComplete(loc, state)
       } else {
-        localStorage.setItem('hasSeenWelcome', 'true')
+        storeValue('hasSeenWelcome', true)
         onComplete(loc)
       }
     } catch {
-      localStorage.setItem('hasSeenWelcome', 'true')
+      storeValue('hasSeenWelcome', true)
       onComplete(loc)
     } finally {
       setLocating(false)

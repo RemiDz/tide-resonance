@@ -1,7 +1,8 @@
 'use client'
 
-import { useMemo, useEffect, useState } from 'react'
+import { useMemo } from 'react'
 import type { TidePoint, TideExtreme, TidalPhase } from '@/types/tidal'
+import { formatTideTime } from '@/lib/tide-time'
 import { getPhaseColour } from '@/lib/colour-utils'
 import {
   mapToSVG,
@@ -21,17 +22,13 @@ interface TidalCurveProps {
   extremes: TideExtreme[]
   phase: TidalPhase
   now: Date
+  timezone?: string
 }
 
-export function TidalCurve({ timeline, extremes, phase, now }: TidalCurveProps) {
+export function TidalCurve({ timeline, extremes, phase, now, timezone = 'UTC' }: TidalCurveProps) {
   const phaseColour = getPhaseColour(phase)
 
-  // Live NOW position — update every 60s
-  const [liveNow, setLiveNow] = useState(now)
-  useEffect(() => {
-    const interval = setInterval(() => setLiveNow(new Date()), 60_000)
-    return () => clearInterval(interval)
-  }, [])
+  const liveNow = now
 
   const computed = useMemo(() => {
     const svgPts = mapToSVG(timeline, VIEWBOX, PADDING)
@@ -46,22 +43,19 @@ export function TidalCurve({ timeline, extremes, phase, now }: TidalCurveProps) 
     }).filter((e) => e.pos !== null)
 
     // Time axis labels
-    const dayStart = new Date(liveNow)
-    dayStart.setHours(0, 0, 0, 0)
-    const dayRange = 24 * 60 * 60 * 1000 - 1
     const plotW = VIEWBOX.width - PADDING.left - PADDING.right
-
-    const timeLabelPositions = TIME_LABELS.map((hr) => {
-      const ms = hr * 60 * 60 * 1000
-      const x = PADDING.left + (ms / dayRange) * plotW
-      return { x, label: `${String(hr).padStart(2, '0')}:00` }
+    const start = timeline[0]?.time.getTime() ?? +now
+    const duration = (timeline.at(-1)?.time.getTime() ?? start + 86400000) - start
+    const timeLabelPositions = TIME_LABELS.map((_, index) => {
+      const fraction = index / TIME_LABELS.length
+      return { x: PADDING.left + fraction * plotW, label: formatTideTime(new Date(start + fraction * duration), timezone) }
     })
 
     // Now X fraction for gradient split
     const nowXFrac = nowP ? (nowP.x / VIEWBOX.width) * 100 : 50
 
     return { svgPts, curve, fill, nowP, extSVG, timeLabelPositions, nowXFrac }
-  }, [timeline, extremes, liveNow])
+  }, [timeline, extremes, liveNow, now, timezone])
 
   const { curve, fill, nowP, extSVG, timeLabelPositions, nowXFrac } = computed
 

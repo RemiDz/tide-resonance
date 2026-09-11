@@ -1,57 +1,18 @@
 'use client'
-
 import { useState, useCallback, useEffect } from 'react'
 import type { Settings } from '@/types/settings'
-
-const STORAGE_KEY = 'tr-settings'
-
-function detectTimeFormat(): '12h' | '24h' {
-  try {
-    const formatted = new Intl.DateTimeFormat(undefined, { hour: 'numeric' }).resolvedOptions()
-    return formatted.hourCycle === 'h12' || formatted.hourCycle === 'h11' ? '12h' : '24h'
-  } catch {
-    return '12h'
-  }
-}
-
-function loadSettings(): Settings {
-  const defaults: Settings = {
-    units: 'metres',
-    timeFormat: detectTimeFormat(),
-    droneEnabled: false,
-    droneVolume: 50,
-    droneFrequency: 432,
-    alertsEnabled: false,
-    alertTiming: 30,
-    alertHigh: true,
-    alertLow: true,
-  }
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored) {
-      const parsed = JSON.parse(stored) as Partial<Settings>
-      return { ...defaults, ...parsed }
-    }
-  } catch {
-    // ignore corrupt storage
-  }
-  return defaults
-}
-
+import { DEFAULT_SETTINGS, readStored, sanitizeSettings, storeValue } from '@/lib/settings'
 export function useSettings() {
-  const [settings, setSettings] = useState<Settings>(loadSettings)
-
-  // Sync to localStorage on change
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings))
-  }, [settings])
-
-  const updateSetting = useCallback(
-    <K extends keyof Settings>(key: K, value: Settings[K]) => {
-      setSettings((prev) => ({ ...prev, [key]: value }))
-    },
-    []
-  )
-
+  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS)
+  // Storage is browser-only; hydrate after the server-compatible first render.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { setSettings(sanitizeSettings(readStored('tr-settings'))) }, [])
+  const updateSetting = useCallback(<K extends keyof Settings>(key: K, value: Settings[K]) => {
+    setSettings(previous => {
+      const next = sanitizeSettings({ ...previous, [key]: value })
+      storeValue('tr-settings', next)
+      return next
+    })
+  }, [])
   return { settings, updateSetting }
 }
