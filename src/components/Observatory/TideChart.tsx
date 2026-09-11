@@ -42,16 +42,16 @@ export function TideChart({ points, extremes, station, settings, now }: Props) {
     </div>
     <svg viewBox={'0 0 ' + W + ' ' + H} role="img" aria-label={'Predicted tide curve for ' + station.name + '. Exact high and low tides are listed alongside.'}
       onPointerMove={inspect} onPointerDown={inspect} onPointerLeave={() => setCursor(null)}>
-      <defs><linearGradient id={gradient} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#98d4c4" stopOpacity=".24"/><stop offset="100%" stopColor="#98d4c4" stopOpacity="0"/></linearGradient></defs>
+      <defs><linearGradient id={gradient} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="var(--td-accent)" stopOpacity=".24"/><stop offset="100%" stopColor="var(--td-accent)" stopOpacity="0"/></linearGradient></defs>
       {[0, 1, 2, 3].map(i => {
         const value = min + (max - min) * i / 3
         const position = bottom - (bottom - top) * i / 3
         return <g key={i}><line x1={left} x2={right} y1={position} y2={position} stroke="currentColor" opacity=".09" strokeDasharray="3 6"/><text x={left - 12} y={position + 4} textAnchor="end">{value.toFixed(1)}</text></g>
       })}
       <path d={curve + ' L' + right + ',' + bottom + ' L' + left + ',' + bottom + ' Z'} fill={'url(#' + gradient + ')'}/>
-      <path d={curve} fill="none" stroke="#abdcca" strokeWidth="2" strokeLinejoin="round"/>
-      {extremes.map(point => <g key={+point.time}><circle cx={x(point.time)} cy={y(point.height)} r="4" fill="#0c2227" stroke="#dbccad" strokeWidth="1.5"/><text x={x(point.time)} y={y(point.height) + (point.type === 'high' ? -12 : 21)} textAnchor="middle" className="td-chart-turn">{point.type === 'high' ? 'H' : 'L'}</text></g>)}
-      {highlight && <g><line x1={x(highlight.time)} x2={x(highlight.time)} y1={top} y2={bottom} stroke="#d9c5a3" opacity=".5" strokeDasharray="3 4"/><circle cx={x(highlight.time)} cy={y(highlight.height)} r="10" fill="#cde5d9" opacity=".12"/><circle cx={x(highlight.time)} cy={y(highlight.height)} r="4" fill="#f6ecd9"/></g>}
+      <path d={curve} fill="none" stroke="var(--td-accent)" strokeWidth="2" strokeLinejoin="round"/>
+      {extremes.map(point => <g key={+point.time}><circle cx={x(point.time)} cy={y(point.height)} r="4" fill="var(--td-chart-surface)" stroke="var(--td-gold)" strokeWidth="1.5"/><text x={x(point.time)} y={y(point.height) + (point.type === 'high' ? -12 : 21)} textAnchor="middle" className="td-chart-turn">{point.type === 'high' ? 'H' : 'L'}</text></g>)}
+      {highlight && <g><line x1={x(highlight.time)} x2={x(highlight.time)} y1={top} y2={bottom} stroke="var(--td-gold)" opacity=".5" strokeDasharray="3 4"/><circle cx={x(highlight.time)} cy={y(highlight.height)} r="10" fill="var(--td-accent)" opacity=".12"/><circle cx={x(highlight.time)} cy={y(highlight.height)} r="4" fill="var(--td-ivory)"/></g>}
       {[0, 1, 2, 3, 4].map(i => {
         const date = new Date(start + (end - start) * i / 4)
         return <text key={i} x={left + (right - left) * i / 4} y={H - 8} textAnchor={i === 0 ? 'start' : i === 4 ? 'end' : 'middle'}>{formatTideTime(date, station.timezone, settings.timeFormat)}</text>

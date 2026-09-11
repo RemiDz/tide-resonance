@@ -35,7 +35,7 @@ export function TideOutlook({ state, settings }: { state: TidalState; settings: 
         <div className="td-curve-column">
           <div className="td-panel-heading"><h3>{isToday ? 'The shape of today' : dateLabel(selected.start, { weekday: 'long' })}</h3><span>{dateLabel(selected.start, { day: 'numeric', month: 'short' })}</span></div>
           <TideChart key={selected.key} points={selected.points} extremes={selected.extremes} station={state.station} settings={settings} now={isToday ? state.computedAt : undefined}/>
-          <div className="td-chart-key"><span><i className="td-dot-mint"/>Predicted height</span><span><i className="td-dot-gold"/>High & low water</span>{isToday && <span><i className="td-dot-white"/>Now</span>}</div>
+          <div className="td-chart-key"><span><i className="td-dot-accent"/>Predicted height</span><span><i className="td-dot-gold"/>High & low water</span>{isToday && <span><i className="td-dot-white"/>Now</span>}</div>
         </div>
         <div className="td-turns"><p className="td-eyebrow">THE TURNING POINTS</p>
           {selected.extremes.length === 0 && <p className="td-note">No high or low water falls on this local date.</p>}
