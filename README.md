@@ -55,7 +55,7 @@ Audio starts only from a play gesture. Its modulation bus precedes the volume co
 
 ## Design
 
-The interface uses a photographic ocean graded in slate blue, midnight glass and warm ivory display type, translucent panels, clear SVG controls and a responsive layout. Mobile safe areas, reduced motion, keyboard chart access, dialog focus restoration and station-local times are supported.
+The interface pairs a luminous sapphire-blue ocean at dawn with peach light, lavender and blue glass panels, and warm ivory display type. Clear SVG controls, mobile safe areas, reduced motion, keyboard chart access, dialog focus restoration and station-local times are supported.
 
 [Artwork source and final prompt](docs/tidara-artwork.md).
 The seascape does not represent current conditions. Source attribution for the selected station appears under “About these tides”.

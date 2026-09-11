@@ -83,7 +83,7 @@ export default function TidaraPage() {
   const stationTime = state ? formatTideTime(state.computedAt, state.station.timezone, settings.timeFormat) : ''
   return <div className="tidara">
     <a className="td-skip" href="#tide-forecast">Skip to tide forecast</a>
-    <div className="td-backdrop" aria-hidden="true"><Image src="/images/tidara-coast.webp" alt="" fill priority sizes="100vw"/></div>
+    <div className="td-backdrop" aria-hidden="true"><Image src="/images/tidara-coast-dawn.webp" alt="" fill priority sizes="100vw"/></div>
     <header className="td-header td-shell">
       <Link href="/" className="td-brand" aria-label="Tidara home"><Icon name="wave"/><span>tidara<span className="td-brand-period">.</span></span></Link>
       <nav className="td-nav" aria-label="Main navigation"><a href="#tide-forecast">Your coast</a><a href="#ocean-ritual">The ritual</a></nav>
@@ -102,7 +102,7 @@ export default function TidaraPage() {
           {error && <div className="td-inline-error" role="alert"><p>{error}</p><button className="td-text-button" onClick={refresh}>Try again</button><button className="td-text-button" onClick={() => setPreferencesOpen(true)}>Choose another coast</button></div>}
         </div>
         {state && next && <div className="td-orbit-card">
-          <div className="td-orbit"><svg viewBox="0 0 220 220" aria-hidden="true"><circle cx="110" cy="110" r="104" fill="none" stroke="currentColor" strokeOpacity=".12"/><circle cx="110" cy="110" r="96" fill="none" stroke="currentColor" strokeOpacity=".15" strokeDasharray="1 7"/><circle cx="110" cy="110" r="104" fill="none" stroke="#d6c4a3" strokeWidth="1.8" strokeDasharray={653.45 * state.phaseProgress + ' 653.45'} transform="rotate(-90 110 110)"/></svg>
+          <div className="td-orbit"><svg viewBox="0 0 220 220" aria-hidden="true"><circle cx="110" cy="110" r="104" fill="none" stroke="currentColor" strokeOpacity=".12"/><circle cx="110" cy="110" r="96" fill="none" stroke="currentColor" strokeOpacity=".15" strokeDasharray="1 7"/><circle cx="110" cy="110" r="104" fill="none" stroke="var(--td-gold)" strokeWidth="1.8" strokeDasharray={653.45 * state.phaseProgress + ' 653.45'} transform="rotate(-90 110 110)"/></svg>
             <div className="td-orbit-content"><Icon name={next.type === 'high' ? 'up' : 'ebb'}/><span className="td-eyebrow">NEXT {next.type.toUpperCase()} WATER</span><strong>{formatTideTime(next.time, state.station.timezone, settings.timeFormat)}</strong><span className="td-orbit-countdown">in {countdown(next.time, state.computedAt)}</span></div>
           </div><span className="td-orbit-height">{formatHeight(next.height, settings.units)} <span>predicted height</span></span>
         </div>}
